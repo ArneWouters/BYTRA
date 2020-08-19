@@ -1,0 +1,54 @@
+language: c++
+os: linux
+dist: focal
+compiler: gcc
+
+branches:
+  only:
+    - master
+
+addons:
+  apt:
+    packages:
+      - gcc
+
+cache:
+  directories:
+    - $TRAVIS_BUILD_DIR/deps/boost_1_73_0/
+
+install:
+  # first we create a directory for the CMake binaries
+  - DEPS_DIR="${TRAVIS_BUILD_DIR}/deps"
+  - if [ ! -d "deps" ]; then mkdir ${DEPS_DIR}; fi
+  - cd ${DEPS_DIR}
+  # we use wget to fetch the cmake binaries
+  - travis_retry wget --no-check-certificate https://github.com/Kitware/CMake/releases/download/v3.18.1/cmake-3.18.1-Linux-x86_64.tar.gz
+  # extract the binaries; the output here is quite lengthy,
+  # so we swallow it to not clutter up the travis console
+  - tar -xvf cmake-3.18.1-Linux-x86_64.tar.gz > /dev/null
+  - mv cmake-3.18.1-Linux-x86_64 cmake-install
+  # add both the top-level directory and the bin directory from the archive
+  # to the system PATH. By adding it to the front of the path we hide the
+  # preinstalled CMake with our own.
+  - PATH=${DEPS_DIR}/cmake-install:${DEPS_DIR}/cmake-install/bin:$PATH
+  # Install Boost
+  - BOOST_DIR="${DEPS_DIR}/boost_1_73_0"
+  - if [ -z "$(ls -A ${BOOST_DIR})" ]; then wget https://sourceforge.net/projects/boost/files/boost/1.73.0/boost_1_73_0.tar.gz && tar -xvzf boost_1_73_0.tar.gz > /dev/null; fi
+  - cd ${BOOST_DIR}
+  - if [ ! -d "stage/lib" ]; then ./bootstrap.sh --prefix=${BOOST_DIR} && ./b2 && sudo ./b2 install > /dev/null; fi
+  - export BOOST_ROOT=${BOOST_DIR}
+  - cd ${DEPS_DIR}
+  # Install TA-Lib
+  - wget https://sourceforge.net/projects/ta-lib/files/ta-lib/0.4.0/ta-lib-0.4.0-src.tar.gz
+  - tar -xvzf ta-lib-0.4.0-src.tar.gz
+  - cd ta-lib
+  - ./configure --prefix=/usr
+  - make
+  - sudo make install
+  # don't forget to switch back to the main build directory once you are done
+  - cd ${TRAVIS_BUILD_DIR}
+
+script:
+  - cmake -Htest -Bbuild/test
+  - cmake --build build/test
+  - ./build/test/MextraTests
