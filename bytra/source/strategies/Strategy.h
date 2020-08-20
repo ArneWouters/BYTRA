@@ -11,7 +11,6 @@
 #include <vector>
 
 #include "../Candle.h"
-#include "Signal.h"
 #include "../Order.h"
 #include "../Position.h"
 
@@ -19,7 +18,7 @@ class Strategy {
   protected:
     std::string name;
     std::string description;
-    std::vector<std::pair<std::string, int>> timeframes;
+    std::vector<std::pair<std::string, int>> timeframes; //keep amounts below 12k
     int maxQty;
     std::string symbol;
     std::string orderType;

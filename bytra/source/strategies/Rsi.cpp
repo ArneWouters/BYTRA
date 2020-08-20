@@ -5,6 +5,7 @@
 #include "Rsi.h"
 
 #include <ta-lib/ta_libc.h>
+#include <spdlog/spdlog.h>
 
 Rsi::Rsi() {
     name = "RSI only strategy";
@@ -18,8 +19,8 @@ Rsi::Rsi() {
           "conditions when RSI readings are under 30. We buy when the market is oversold and sell "
           "when "
           "the market is overbought.";
-    timeframes = {{"1", 1000}};
-    symbol = "XBTUSD";
+    timeframes = {{"1", 10}};
+    symbol = "BTCUSD";
     maxQty = 100;
     orderType = "Limit";
     slippage = 10.0;
@@ -27,7 +28,7 @@ Rsi::Rsi() {
 
 bool Rsi::checkLongEntry(std::map<TimeFrame, std::vector<std::shared_ptr<Candle>>> &candles) {
     auto logger = spdlog::get("basic_logger");
-    auto tf = TimeFrame::parse(timeframes[0].first);
+    auto tf = TimeFrame(timeframes[0].first, timeframes[0].second);
     double rsi_value = calculateRSI(candles[tf]);
 
     if (rsi_value < 50) {
@@ -40,7 +41,7 @@ bool Rsi::checkLongEntry(std::map<TimeFrame, std::vector<std::shared_ptr<Candle>
 
 bool Rsi::checkShortEntry(std::map<TimeFrame, std::vector<std::shared_ptr<Candle>>> &candles) {
     auto logger = spdlog::get("basic_logger");
-    auto tf = TimeFrame::parse(timeframes[0].first);
+    auto tf = TimeFrame(timeframes[0].first, timeframes[0].second);
     double rsi_value = calculateRSI(candles[tf]);
 
     if (rsi_value > 50) {
@@ -53,7 +54,7 @@ bool Rsi::checkShortEntry(std::map<TimeFrame, std::vector<std::shared_ptr<Candle
 
 bool Rsi::checkExit(std::map<TimeFrame, std::vector<std::shared_ptr<Candle>>> &candles, std::shared_ptr<Position> position) {
     auto logger = spdlog::get("basic_logger");
-    auto tf = TimeFrame::parse(timeframes[0].first);
+    auto tf = TimeFrame(timeframes[0].first, timeframes[0].second);
     double rsi_value = calculateRSI(candles[tf]);
 
     if ((rsi_value > 50 && position->isLong()) || (rsi_value < 50 && position->isShort())) {

@@ -31,21 +31,31 @@ private:
     std::string baseUrl;
     std::string websocketHost;
     std::string websocketTarget;
+    beast::flat_buffer websocketBuffer;
     std::string apiKey;
     std::string apiSecret;
-    int minCandleAmount = 0;
-    std::map<std::string, std::vector<std::shared_ptr<Candle>>> candles;
+    std::map<TimeFrame, std::vector<std::shared_ptr<Candle>>> candles;
     std::vector<std::string> allowedTimeframes
             = {"1", "3", "5", "15", "30", "60", "120", "240", "360","D", "W", "M"};
     std::shared_ptr<websocket::stream<ssl::stream<tcp::socket>>> websocket;
-    std::map<TimeFrame, Datetime> lastTimestamps;  // used to keep track of prev timestamps for new candles in websocket
     std::shared_ptr<Position> position;
     std::shared_ptr<Strategy> strategy;
 
 public:
     Bybit(std::string &baseUrl, std::string &apiKey, std::string &apiSecret, std::string &websocketHost,
-          std::string &websocketTarget, std::shared_ptr<Strategy> strategy);
+          std::string &websocketTarget, const std::shared_ptr<Strategy>& strategy);
 
+    void getCandlesApi();
+
+    void connect();
+
+    void disconnect();
+
+    bool isConnected();
+
+    void readWebsocket();
+
+    void parseWebsocketMsg(const std::string &msg);
 };
 
 

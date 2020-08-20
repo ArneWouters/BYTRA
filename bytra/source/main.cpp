@@ -111,26 +111,19 @@ int main(int argc, char **argv) {
     // This buffer will hold the incoming message
     beast::flat_buffer buffer;
 
+//    std::string expires = std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() + 3000);
+
     // Program Loop
-//    for (;;) {
-//        while (bybit->isConnected()) {
-//            auto ws = bybit->getWebsocket().get();
-//            ws->read(buffer);
-//
-//            // Check for a message in our buffer
-//            if (buffer.size() != 0) {
-//                // The make_printable() function helps print a ConstBufferSequence
-//                bybit->parseWebsocketMsg(beast::buffers_to_string(buffer.data()));
-//                buffer.clear();
-//
-//                bybit->doAutomatedTrading();
-//            }
+    for (;;) {
+        while (bybit->isConnected()) {
+            bybit->readWebsocket();
+//            bybit->doAutomatedTrading();
 //            bybit->cleanup();
-//        }
-//        sleep(1);
-//        std::cout << "Attempting to (re)connect..." << std::endl;
-//        bybit->connect();
-//    }
+        }
+        sleep(1);
+        std::cout << "Attempting to (re)connect..." << std::endl;
+        bybit->connect();
+    }
 
     return 0;
 }

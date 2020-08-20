@@ -9,7 +9,6 @@
 #include <string>
 #include <vector>
 
-#include "Signal.h"
 #include "Strategy.h"
 
 class Rsi : public Strategy {

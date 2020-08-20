@@ -51,4 +51,4 @@ install:
 script:
   - cmake -Htest -Bbuild/test
   - cmake --build build/test
-  - ./build/test/MextraTests
+  - ./build/test/BytraTests

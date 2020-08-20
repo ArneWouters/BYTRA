@@ -11,7 +11,7 @@
 
 struct Position {
     std::string symbol;
-    Datetime timestamp{};
+    long timestamp = 0;
     int qty = 0;
     double entryPrice = 0.0;
     double currentAskPrice = 0.0;
