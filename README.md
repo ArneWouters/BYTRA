@@ -1,6 +1,6 @@
 # BYTRA
 
-[![Build Status](https://travis-ci.com/ArneWouters/BYTRA.svg)](https://travis-ci.com/ArneWouters/BYTRA)
+[![Build Status](https://travis-ci.com/ArneWouters/BYTRA.svg?token=whAYzQpaYXnwwohSyHG7&branch=master)](https://travis-ci.com/ArneWouters/BYTRA)
 <a href="https://github.com/ArneWouters/BYTRA/blob/master/LICENSE" target="_blank">
   <img src="https://img.shields.io/github/license/ArneWouters/BYTRA.svg" alt="GitHub license">
 </a>
