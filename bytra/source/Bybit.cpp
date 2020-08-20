@@ -43,6 +43,9 @@ Bybit::Bybit(std::string &baseUrl, std::string &apiKey, std::string &apiSecret, 
         candles[TimeFrame(tf.first, tf.second)] = {};
     }
     getCandlesApi();
+
+    position = std::make_shared<Position>();
+    position->symbol = strategy->getSymbol();
 }
 
 void Bybit::getCandlesApi() {
@@ -59,9 +62,10 @@ void Bybit::getCandlesApi() {
         session.SetUrl(cpr::Url{baseUrl + endpoint});
 
         for (int i = 0; i < batches; i++) {
-            auto parameters = cpr::Parameters{{"symbol",   strategy->getSymbol()},
-                                              {"interval", tf.symbol},
-                                              {"from",     std::to_string(from)}};
+            auto parameters = cpr::Parameters{
+                {"symbol",   strategy->getSymbol()},
+                {"interval", tf.symbol},
+                {"from",     std::to_string(from)}};
             session.SetParameters(parameters);
 
             spdlog::debug("[HTTP-GET] " + baseUrl + endpoint + " - " + parameters.content);
@@ -230,4 +234,42 @@ void Bybit::parseWebsocketMsg(const std::string &msg) {
             }
         }
     }
+}
+
+void Bybit::placeMarketOrder(const Order &ord) {
+    std::string expires = std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() + 1000);
+
+    std::string endpoint = "/v2/private/order/create";
+    cpr::Payload payload = cpr::Payload{
+        {"api_key", apiKey},
+        {"order_type", "Market"},
+        {"qty", std::to_string(std::abs(ord.qty))},
+        {"side", ord.qty > 0 ? "Buy": "Sell"},
+        {"symbol", strategy->getSymbol()},
+        {"time_in_force", "ImmediateOrCancel"},
+        {"timestamp", expires}};
+
+    cpr::CurlHolder holder;
+
+    if (ord.reduce) {
+        payload.AddPair({"reduce_only", "true"}, holder);
+    }
+
+    payload.AddPair({"sign", HmacEncode(payload.content, apiSecret)}, holder);
+
+    spdlog::debug("[HTTP-POST] " + baseUrl + endpoint + payload.content);
+    cpr::Response r = cpr::Post(cpr::Url{baseUrl + endpoint}, payload);
+    spdlog::debug("[RESP-" + std::to_string(r.status_code) + "] " + r.text);
+
+    if (r.status_code != 200) {
+        spdlog::error("Bybit::placeMarketOrder - bad response - " + r.text);
+        throw std::runtime_error("Bad API response.");
+    }
+
+    dom::parser parser;
+    dom::element response = parser.parse(r.text);
+
+    position->qty += ord.qty;
+    position->timestamp = std::stol(expires);
+    position->entryPrice = (double) response["result"]["price"];
 }

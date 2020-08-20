@@ -12,7 +12,7 @@ struct Order {
     int qty = 0;
     int cumQty = 0;
     double price = 0.0;
-    double allowedSlippage;
+    double allowedSlippage = 0.0;
     bool reduce = true;
 
     Order() = default;

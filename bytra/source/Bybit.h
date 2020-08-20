@@ -56,6 +56,8 @@ public:
     void readWebsocket();
 
     void parseWebsocketMsg(const std::string &msg);
+
+    void placeMarketOrder(const Order &ord);
 };
 
 

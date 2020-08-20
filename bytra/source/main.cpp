@@ -111,8 +111,6 @@ int main(int argc, char **argv) {
     // This buffer will hold the incoming message
     beast::flat_buffer buffer;
 
-//    std::string expires = std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() + 3000);
-
     // Program Loop
     for (;;) {
         while (bybit->isConnected()) {
