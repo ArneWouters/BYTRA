@@ -9,13 +9,13 @@
 
 #include "Candle.h"
 
-struct Position {
-    std::string symbol;
-    long timestamp = 0;
-    int qty = 0;
-    double entryPrice = 0.0;
-    double currentAskPrice = 0.0;
-    double currentBidPrice = 0.0;
+class Position {
+public:
+    long qty = 0;
+    std::string lastOrderId;
+    bool activeOrder = false;
+
+    Position() = default;
 
     [[nodiscard]] bool isShort() const { return qty < 0; }
 

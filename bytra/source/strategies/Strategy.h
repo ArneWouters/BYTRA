@@ -17,8 +17,8 @@
 class Strategy {
   protected:
     std::string name;
-    std::vector<std::pair<std::string, int>> timeframes;  // keep amounts below 12k
-    int maxQty;
+    std::vector<std::pair<std::string, int>> timeframes;  // keep amounts below 10k
+    long maxQty;
     std::string symbol;
     std::string orderType;
     double slippage;
@@ -39,7 +39,7 @@ class Strategy {
 
     std::string getOrderType() { return orderType; }
 
-    [[nodiscard]] int getMaxQty() const { return maxQty; }
+    [[nodiscard]] long getMaxQty() const { return maxQty; }
 
     [[nodiscard]] double getSlippage() const { return slippage; }
 };
