@@ -1,10 +1,8 @@
 # BYTRA
 
 [![Build Status](https://travis-ci.com/ArneWouters/BYTRA.svg?token=whAYzQpaYXnwwohSyHG7&branch=master)](https://travis-ci.com/ArneWouters/BYTRA)
-<a href="https://github.com/ArneWouters/BYTRA/blob/master/LICENSE" target="_blank">
-  <img src="https://img.shields.io/github/license/ArneWouters/BYTRA.svg" alt="GitHub license">
-</a>
-[![Release](https://img.shields.io/github/release/ArneWouters/BYTRA.svg)](https://github.com/ArneWouters/BYTRA/releases/latest)
+[![GitHub](https://img.shields.io/github/license/ArneWouters/BYTRA?color=blue)](https://github.com/ArneWouters/BYTRA/blob/master/LICENSE)
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/ArneWouters/BYTRA)](https://github.com/ArneWouters/BYTRA/releases/latest)
 
 * An automated algorithmic cryptocurrency trader for Bybit.
 * All BYTRA code is released under MIT license
