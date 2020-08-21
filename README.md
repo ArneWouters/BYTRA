@@ -10,7 +10,9 @@
 * All BYTRA code is released under MIT license
 * Other code in this repo released under its respective license
 
-## Requirements
+## Getting Started
+
+### Prerequisites
 
 These have to be installed on the current system.
  * zlib1g-dev
@@ -19,11 +21,13 @@ These have to be installed on the current system.
  * Boost
  
 Installing zlib1g-dev and libssl-dev:
+
 ```bash
 sudo apt-get install zlib1g-dev libssl-dev
 ```
  
 Installing TA-Lib:
+
 ```bash
 wget https://sourceforge.net/projects/ta-lib/files/ta-lib/0.4.0/ta-lib-0.4.0-src.tar.gz && tar -xvzf ta-lib-0.4.0-src.tar.gz > /dev/null
 cd ta-lib
@@ -32,6 +36,7 @@ make && sudo make install
 ```
  
 Installing Boost:
+
 ```bash
 wget https://sourceforge.net/projects/boost/files/boost/1.73.0/boost_1_73_0.tar.gz && tar -xvzf boost_1_73_0.tar.gz > /dev/null
 cd boost_1_73_0
@@ -40,6 +45,14 @@ cd boost_1_73_0
 ```
 
 ## Usage
+
+### Clone the repository
+
+```bash
+git clone https://github.com/ArneWouters/BYTRA.git
+cd Bytra
+```
+
 ### Build and run the target
 
 Use the following command to build and run the executable target.
@@ -79,8 +92,6 @@ cmake --build build/test --target fix-format
 ```
 
 See [Format.cmake](https://github.com/TheLartians/Format.cmake) for details.
-
-## Releases
 
 ## Built with
  * [CLI11](https://github.com/CLIUtils/CLI11) - Header only single or multi-file C++11 library for simple and advanced CLI parsing.
