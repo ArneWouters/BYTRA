@@ -115,6 +115,7 @@ int main(int argc, char **argv) {
 
     // This buffer will hold the incoming message
     beast::flat_buffer buffer;
+    int websocketHeartbeatTimer = std::time(nullptr);
 
     // Program Loop
     for (;;) {
@@ -122,6 +123,12 @@ int main(int argc, char **argv) {
             bybit->readWebsocket();
             bybit->doAutomatedTrading();
             bybit->removeUnusedCandles();
+
+            // Send heartbeat packet every 55 seconds to maintain websocket connection
+            if (std::time(nullptr) - websocketHeartbeatTimer > 55) {
+                websocketHeartbeatTimer = std::time(nullptr);
+                bybit->sendWebsocketHeartbeat();
+            }
         }
         sleep(1);
         std::cout << "Attempting to (re)connect..." << std::endl;

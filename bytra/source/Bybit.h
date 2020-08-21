@@ -56,6 +56,8 @@ class Bybit {
 
     void parseWebsocketMsg(const std::string &msg);
 
+    void sendWebsocketHeartbeat();
+
     void placeMarketOrder(const Order &ord);
 
     void doAutomatedTrading();
