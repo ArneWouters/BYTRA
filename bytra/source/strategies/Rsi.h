@@ -19,7 +19,8 @@ class Rsi : public Strategy {
 
     bool checkShortEntry(std::map<TimeFrame, std::vector<std::shared_ptr<Candle>>> &candles) override;
 
-    bool checkExit(std::map<TimeFrame, std::vector<std::shared_ptr<Candle>>> &candles, std::shared_ptr<Position> position) override;
+    bool checkExit(std::map<TimeFrame, std::vector<std::shared_ptr<Candle>>> &candles,
+                   std::shared_ptr<Position> position) override;
 
     double calculateRSI(std::vector<std::shared_ptr<Candle>> &candles);
 };

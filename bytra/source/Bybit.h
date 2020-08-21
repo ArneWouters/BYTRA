@@ -5,7 +5,6 @@
 #ifndef BYTRA_BYBIT_H
 #define BYTRA_BYBIT_H
 
-
 #include <simdjson.h>
 
 #include <boost/asio/ip/tcp.hpp>
@@ -27,7 +26,7 @@ using tcp = boost::asio::ip::tcp;        // from <boost/asio/ip/tcp.hpp>
 using namespace simdjson;
 
 class Bybit {
-private:
+  private:
     std::string baseUrl;
     std::string websocketHost;
     std::string websocketTarget;
@@ -35,16 +34,15 @@ private:
     std::string apiKey;
     std::string apiSecret;
     std::map<TimeFrame, std::vector<std::shared_ptr<Candle>>> candles;
-    std::vector<std::string> allowedTimeframes
-            = {"1", "3", "5", "15", "30", "60", "120", "240", "360","D", "W", "M"};
+    std::vector<std::string> allowedTimeframes = {"1", "3", "5", "15", "30", "60", "120", "240", "360", "D", "W", "M"};
     std::shared_ptr<websocket::stream<ssl::stream<tcp::socket>>> websocket;
     std::shared_ptr<Position> position;
     std::shared_ptr<Strategy> strategy;
     bool newCandleAdded = true;
 
-public:
+  public:
     Bybit(std::string &baseUrl, std::string &apiKey, std::string &apiSecret, std::string &websocketHost,
-          std::string &websocketTarget, const std::shared_ptr<Strategy>& strategy);
+          std::string &websocketTarget, const std::shared_ptr<Strategy> &strategy);
 
     void getCandlesApi();
 
@@ -65,5 +63,4 @@ public:
     void removeUnusedCandles();
 };
 
-
-#endif //BYTRA_BYBIT_H
+#endif  // BYTRA_BYBIT_H

@@ -6,8 +6,9 @@
 #define BYTRA_ENCRYPTION_H
 
 #include <openssl/hmac.h>
-#include <string>
+
 #include <iomanip>
+#include <string>
 
 typedef std::map<std::string, std::string> Params;
 
@@ -28,13 +29,13 @@ std::string HmacEncode(const std::string &param_str, const std::string &apiSecre
     return ss.str();
 }
 
-std::string GetSignature(const Params &param, const std::string &secret){
+std::string GetSignature(const Params &param, const std::string &secret) {
     std::string input;
-    for(auto & it : param){
+    for (auto &it : param) {
         input += it.first + "=" + it.second + "&";
     }
 
-    return HmacEncode(secret, input.substr(0, input.length()-1));
+    return HmacEncode(secret, input.substr(0, input.length() - 1));
 }
 
-#endif //BYTRA_ENCRYPTION_H
+#endif  // BYTRA_ENCRYPTION_H

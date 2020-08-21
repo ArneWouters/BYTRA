@@ -17,16 +17,16 @@ struct Order {
 
     Order() = default;
 
-    Order(const int &qty, const bool &reduce = false){
+    Order(const int &qty, const bool &reduce = false) {
         this->reduce = reduce;
         this->qty = qty;
     }
 
-    Order(const double &price, const int &qty, const double &slippage, const bool &reduce = false){
+    Order(const double &price, const int &qty, const double &slippage, const bool &reduce = false) {
         this->reduce = reduce;
         this->qty = qty;
         this->allowedSlippage = slippage;
     }
 };
 
-#endif //MEXTRA_ORDER_H
+#endif  // MEXTRA_ORDER_H

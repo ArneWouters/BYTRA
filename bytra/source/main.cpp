@@ -17,10 +17,10 @@
 #include <string>
 #include <toml++/toml.hpp>
 
-#include "TerminalColors.h"
-#include "strategies/Strategy.h"
-#include "strategies/Rsi.h"
 #include "Bybit.h"
+#include "TerminalColors.h"
+#include "strategies/Rsi.h"
+#include "strategies/Strategy.h"
 
 namespace beast = boost::beast;
 
@@ -104,8 +104,8 @@ int main(int argc, char **argv) {
     std::string apiKey = *tbl["bybit-testnet"]["apiKey"].value<std::string>();
     std::string apiSecret = *tbl["bybit-testnet"]["apiSecret"].value<std::string>();
 
-    auto bybit
-        = std::make_shared<Bybit>(baseUrl, apiKey, apiSecret, websocketHost, websocketTarget, validStrategies[strategy]);
+    auto bybit = std::make_shared<Bybit>(baseUrl, apiKey, apiSecret, websocketHost, websocketTarget,
+                                         validStrategies[strategy]);
 
     std::cout << GREEN << " ✔" << RESET << std::endl;
 

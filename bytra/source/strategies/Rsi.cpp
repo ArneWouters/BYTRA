@@ -4,8 +4,8 @@
 
 #include "Rsi.h"
 
-#include <ta-lib/ta_libc.h>
 #include <spdlog/spdlog.h>
+#include <ta-lib/ta_libc.h>
 
 Rsi::Rsi() {
     name = "RSI only strategy";
@@ -49,7 +49,8 @@ bool Rsi::checkShortEntry(std::map<TimeFrame, std::vector<std::shared_ptr<Candle
     return false;
 }
 
-bool Rsi::checkExit(std::map<TimeFrame, std::vector<std::shared_ptr<Candle>>> &candles, std::shared_ptr<Position> position) {
+bool Rsi::checkExit(std::map<TimeFrame, std::vector<std::shared_ptr<Candle>>> &candles,
+                    std::shared_ptr<Position> position) {
     auto logger = spdlog::get("basic_logger");
     auto tf = TimeFrame(timeframes[0].first, timeframes[0].second);
     double rsi_value = calculateRSI(candles[tf]);
@@ -79,7 +80,7 @@ double Rsi::calculateRSI(std::vector<std::shared_ptr<Candle>> &candles) {
 
     TA_RetCode retCode = TA_RSI(startIdx, endIdx, close.data(), rsi_length, &outBegIdx, &outNbElement, rsi.data());
 
-    double rsi_value = rsi[outNbElement-1];
+    double rsi_value = rsi[outNbElement - 1];
 
     return rsi_value;
 }

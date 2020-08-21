@@ -1,6 +1,7 @@
 #include <doctest/doctest.h>
 
 #include <string>
+
 #include "../bytra/source/strategies/Rsi.cpp"
 
 TEST_CASE("RSI") {
