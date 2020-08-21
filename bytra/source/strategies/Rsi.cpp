@@ -11,18 +11,15 @@ Rsi::Rsi() {
     name = "RSI only strategy";
     description
         = "The relative strength index (RSI) is most commonly used to indicate temporarily "
-          "overbought or "
-          "oversold conditions in a market. The RSI is a widely used technical indicator and an "
-          "oscillator "
+          "overbought or oversold conditions in a market. "
+          "The RSI is a widely used technical indicator and an oscillator "
           "that indicates a market is overbought when the RSI value is over 70 and indicates "
-          "oversold "
-          "conditions when RSI readings are under 30. We buy when the market is oversold and sell "
-          "when "
-          "the market is overbought.";
-    timeframes = {{"1", 10}};
+          "oversold conditions when RSI readings are under 30. "
+          "We buy when the market is oversold and sell when the market is overbought.";
+    timeframes = {{"1", 1000}};
     symbol = "BTCUSD";
     maxQty = 100;
-    orderType = "Limit";
+    orderType = "Market";
     slippage = 10.0;
 }
 
@@ -31,8 +28,8 @@ bool Rsi::checkLongEntry(std::map<TimeFrame, std::vector<std::shared_ptr<Candle>
     auto tf = TimeFrame(timeframes[0].first, timeframes[0].second);
     double rsi_value = calculateRSI(candles[tf]);
 
-    if (rsi_value < 50) {
-        logger->info("Entry Long qty={} and rsi={}", maxQty, rsi_value);
+    if (rsi_value < 30) {
+        spdlog::debug("Entry Long rsi={}", rsi_value);
         return true;
     }
 
@@ -44,8 +41,8 @@ bool Rsi::checkShortEntry(std::map<TimeFrame, std::vector<std::shared_ptr<Candle
     auto tf = TimeFrame(timeframes[0].first, timeframes[0].second);
     double rsi_value = calculateRSI(candles[tf]);
 
-    if (rsi_value > 50) {
-        logger->info("Entry Short qty={} and rsi={}", -maxQty, rsi_value);
+    if (rsi_value > 70) {
+        spdlog::debug("Entry Short rsi={}", rsi_value);
         return true;
     }
 
@@ -58,7 +55,7 @@ bool Rsi::checkExit(std::map<TimeFrame, std::vector<std::shared_ptr<Candle>>> &c
     double rsi_value = calculateRSI(candles[tf]);
 
     if ((rsi_value > 50 && position->isLong()) || (rsi_value < 50 && position->isShort())) {
-        logger->info("Exit rsi={}", rsi_value);
+        spdlog::debug("Exit rsi={}", rsi_value);
         return true;
     }
 

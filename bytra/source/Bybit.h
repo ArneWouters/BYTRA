@@ -40,6 +40,7 @@ private:
     std::shared_ptr<websocket::stream<ssl::stream<tcp::socket>>> websocket;
     std::shared_ptr<Position> position;
     std::shared_ptr<Strategy> strategy;
+    bool newCandleAdded = true;
 
 public:
     Bybit(std::string &baseUrl, std::string &apiKey, std::string &apiSecret, std::string &websocketHost,
@@ -58,6 +59,10 @@ public:
     void parseWebsocketMsg(const std::string &msg);
 
     void placeMarketOrder(const Order &ord);
+
+    void doAutomatedTrading();
+
+    void removeUnusedCandles();
 };
 
 

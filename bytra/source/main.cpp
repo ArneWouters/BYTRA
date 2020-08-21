@@ -59,6 +59,7 @@ int main(int argc, char **argv) {
         auto logger = spdlog::basic_logger_mt("basic_logger", "data/logs.txt");
         spdlog::set_default_logger(logger);
         spdlog::flush_every(std::chrono::seconds(1));
+        spdlog::flush_on(spdlog::level::err);
         spdlog::set_pattern("[%Y-%m-%d %T] [%L] %v");
         spdlog::info("Welcome to spdlog!");
 
@@ -115,8 +116,8 @@ int main(int argc, char **argv) {
     for (;;) {
         while (bybit->isConnected()) {
             bybit->readWebsocket();
-//            bybit->doAutomatedTrading();
-//            bybit->cleanup();
+            bybit->doAutomatedTrading();
+            bybit->removeUnusedCandles();
         }
         sleep(1);
         std::cout << "Attempting to (re)connect..." << std::endl;

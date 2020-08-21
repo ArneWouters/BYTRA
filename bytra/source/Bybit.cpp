@@ -178,7 +178,7 @@ void Bybit::readWebsocket() {
 }
 
 void Bybit::parseWebsocketMsg(const std::string &msg) {
-    std::cout << msg << std::endl;
+//    std::cout << msg << std::endl;
 
     dom::parser parser;
     dom::element response = parser.parse(msg);
@@ -228,6 +228,7 @@ void Bybit::parseWebsocketMsg(const std::string &msg) {
                 for (auto &[tf, vec] : candles) {
                     if (tf.symbol == interval && vec.back()->timestamp != candle->timestamp) {
                         vec.push_back(candle);
+                        newCandleAdded = true;
                         break;
                     }
                 }
@@ -240,14 +241,11 @@ void Bybit::placeMarketOrder(const Order &ord) {
     std::string expires = std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() + 1000);
 
     std::string endpoint = "/v2/private/order/create";
+    //pairs have to be in alphabetic order
     cpr::Payload payload = cpr::Payload{
         {"api_key", apiKey},
         {"order_type", "Market"},
-        {"qty", std::to_string(std::abs(ord.qty))},
-        {"side", ord.qty > 0 ? "Buy": "Sell"},
-        {"symbol", strategy->getSymbol()},
-        {"time_in_force", "ImmediateOrCancel"},
-        {"timestamp", expires}};
+        {"qty", std::to_string(std::abs(ord.qty))}};
 
     cpr::CurlHolder holder;
 
@@ -255,6 +253,10 @@ void Bybit::placeMarketOrder(const Order &ord) {
         payload.AddPair({"reduce_only", "true"}, holder);
     }
 
+    payload.AddPair({"side", ord.qty > 0 ? "Buy": "Sell"}, holder);
+    payload.AddPair({"symbol", strategy->getSymbol()}, holder);
+    payload.AddPair({"time_in_force", "ImmediateOrCancel"}, holder);
+    payload.AddPair({"timestamp", expires}, holder);
     payload.AddPair({"sign", HmacEncode(payload.content, apiSecret)}, holder);
 
     spdlog::debug("[HTTP-POST] " + baseUrl + endpoint + payload.content);
@@ -269,7 +271,52 @@ void Bybit::placeMarketOrder(const Order &ord) {
     dom::parser parser;
     dom::element response = parser.parse(r.text);
 
+    int retCode = response["ret_code"].get_int64();
+
+    if (retCode != 0) {
+        spdlog::error("Bybit::placeMarketOrder - bad response - " + (std::string) response["ret_msg"]);
+        throw std::runtime_error("Bad API response.");
+    }
+
     position->qty += ord.qty;
     position->timestamp = std::stol(expires);
     position->entryPrice = (double) response["result"]["price"];
+}
+
+void Bybit::doAutomatedTrading() {
+    if (newCandleAdded) {
+        if (position->qty != 0) {
+            auto exit = strategy->checkExit(candles, position);
+
+            if (exit) {
+                if (strategy->getOrderType() == "Market") {
+                    placeMarketOrder(Order(-position->qty, true));
+                }
+            }
+        }
+
+        if (strategy->checkLongEntry(candles) && position->qty == 0) {
+            if (strategy->getOrderType() == "Market") {
+                placeMarketOrder(Order(strategy->getMaxQty()));
+            }
+        } else if (strategy->checkShortEntry(candles) && position->qty == 0) {
+            if (strategy->getOrderType() == "Market") {
+                placeMarketOrder(Order(-strategy->getMaxQty()));
+            }
+        }
+        newCandleAdded = false;
+    }
+}
+
+void Bybit::removeUnusedCandles() {
+    int factor = 4;
+
+    for (auto const &[tf, vec] : candles) {
+        if (vec.size() >= tf.amount * factor) {
+            auto first = vec.end() - tf.amount;
+            auto last = vec.end();
+            std::vector<std::shared_ptr<Candle>> new_vec(first, last);
+            candles[tf] = new_vec;
+        }
+    }
 }
