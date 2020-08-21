@@ -6,26 +6,28 @@
 #define MEXTRA_ORDER_H
 
 #include <string>
+#include <chrono>
 
-struct Order {
-    std::string id;
-    int qty = 0;
-    int cumQty = 0;
-    double price = 0.0;
-    double allowedSlippage = 0.0;
+using namespace std::chrono;
+
+class Order {
+public:
+    long qty;
+    double price;
+    std::pair<double, double> priceInterval;
+    double slippage;
     bool reduce = true;
 
-    Order() = default;
-
-    Order(const int &qty, const bool &reduce = false) {
+    Order(const long &qty, const bool &reduce = false) {
         this->reduce = reduce;
         this->qty = qty;
     }
 
-    Order(const double &price, const int &qty, const double &slippage, const bool &reduce = false) {
+    Order(const double &price, const long &qty, const double &slippage, const bool &reduce = false) {
         this->reduce = reduce;
         this->qty = qty;
-        this->allowedSlippage = slippage;
+        this->slippage = slippage;
+        this->priceInterval = {price - slippage, price + slippage};
     }
 };
 

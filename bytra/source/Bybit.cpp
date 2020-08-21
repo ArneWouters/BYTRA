@@ -25,6 +25,7 @@ namespace ssl = boost::asio::ssl;        // from <boost/asio/ssl.hpp>
 namespace net = boost::asio;             // from <boost/asio.hpp>
 using tcp = boost::asio::ip::tcp;        // from <boost/asio/ip/tcp.hpp>
 using namespace simdjson;
+using namespace std::chrono;
 
 Bybit::Bybit(std::string &baseUrl, std::string &apiKey, std::string &apiSecret, std::string &websocketHost,
              std::string &websocketTarget, const std::shared_ptr<Strategy> &strategy) {
@@ -47,14 +48,12 @@ Bybit::Bybit(std::string &baseUrl, std::string &apiKey, std::string &apiSecret, 
     getCandlesApi();
 
     position = std::make_shared<Position>();
-    position->symbol = strategy->getSymbol();
 }
 
 void Bybit::getCandlesApi() {
     for (auto &[tf, vec] : candles) {
         long currentTime
-            = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch())
-                  .count();
+            = duration_cast<seconds>(system_clock::now().time_since_epoch()).count();
         long from = currentTime - (tf.ticks * (tf.amount + 1) * 60);
         std::vector<std::shared_ptr<Candle>> candles_tf;
 
@@ -100,17 +99,87 @@ void Bybit::getCandlesApi() {
     }
 }
 
+void Bybit::getPositionApi() {
+    std::string expires = std::to_string(
+            duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count()+ 1000);
+
+    std::string endpoint = "/v2/private/position/list";
+    // pairs have to be in alphabetic order
+    auto parameters
+            = cpr::Parameters{{"api_key", apiKey}, {"symbol", strategy->getSymbol()}, {"timestamp", expires}};
+
+    cpr::CurlHolder holder;
+    parameters.AddParameter({"sign", HmacEncode(parameters.content, apiSecret)}, holder);
+
+    spdlog::debug("[HTTP-GET] " + baseUrl + endpoint + parameters.content);
+    cpr::Response r = cpr::Get(cpr::Url{baseUrl + endpoint}, parameters);
+    spdlog::debug("[RESP-" + std::to_string(r.status_code) + "] " + r.text);
+
+    if (r.status_code != 200) {
+        spdlog::error("Bybit::getPositionApi - bad response - " + r.text);
+        throw std::runtime_error("Bad API response.");
+    }
+
+    dom::parser parser;
+    dom::element response = parser.parse(r.text);
+
+    int retCode = response["ret_code"].get_int64();
+
+    if (retCode != 0) {
+        spdlog::error("Bybit::getPositionApi - bad response - " + (std::string)response["ret_msg"]);
+        throw std::runtime_error("Bad API response.");
+    }
+
+    std::string side = (std::string) response["result"]["side"];
+    long qty = (long) response["result"]["size"];
+    if (side == "Sell") { qty = -qty; }
+    position->qty = qty;
+}
+
+void Bybit::cancelAllActiveOrders() {
+    std::string expires = std::to_string(
+            duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count()+ 1000);
+
+    std::string endpoint = "/v2/private/order/cancelAll";
+    // pairs have to be in alphabetic order
+    cpr::Payload payload
+            = cpr::Payload{{"api_key", apiKey}, {"symbol", strategy->getSymbol()}, {"timestamp", expires}};
+
+    cpr::CurlHolder holder;
+    payload.AddPair({"sign", HmacEncode(payload.content, apiSecret)}, holder);
+
+    spdlog::debug("[HTTP-POST] " + baseUrl + endpoint + payload.content);
+    cpr::Response r = cpr::Post(cpr::Url{baseUrl + endpoint}, payload);
+    spdlog::debug("[RESP-" + std::to_string(r.status_code) + "] " + r.text);
+
+    if (r.status_code != 200) {
+        spdlog::error("Bybit::cancelAllActiveOrders - bad response - " + r.text);
+        throw std::runtime_error("Bad API response.");
+    }
+
+    dom::parser parser;
+    dom::element response = parser.parse(r.text);
+
+    int retCode = response["ret_code"].get_int64();
+
+    if (retCode != 0) {
+        spdlog::error("Bybit::cancelAllActiveOrders - bad response - " + (std::string)response["ret_msg"]);
+        throw std::runtime_error("Bad API response.");
+    }
+}
+
 void Bybit::connect() {
+    cancelAllActiveOrders();
+    getPositionApi();
+
     const std::string host = websocketHost;
     const std::string port = "443";
     std::string expires = std::to_string(
-        std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch())
-            .count()
-        + 3000);
+        ::duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count() + 1000);
 
     std::string auth_msg = R"({"op":"auth","args":[")" + apiKey + R"(",")" + expires + R"(",")"
                            + HmacEncode("GET/realtime" + expires, apiSecret) + R"("]})";
-    std::string msg = R"({"op": "subscribe", "args": [)";
+    std::string msg = R"({"op": "subscribe", "args": ["position","order",)";
 
     for (auto const &[tf, val] : candles) {
         msg.append("\"klineV2." + tf.symbol + ".");
@@ -212,7 +281,15 @@ void Bybit::parseWebsocketMsg(const std::string &msg) {
     if (!error) {
         std::string topic = (std::string)response["topic"];
 
-        if (topic.size() > 7 && topic.substr(0, 7) == "klineV2") {
+        if (topic == "position") {
+            for (dom::object item : response["data"]) {
+                std::string side = (std::string) item["side"];
+                long qty = (long) item["size"];
+                if (side == "Sell") { qty = -qty; }
+                position->qty = qty;
+            }
+
+        } else if (topic.size() > 7 && topic.substr(0, 7) == "klineV2") {
             std::string::size_type n = topic.find('.');
             std::string::size_type n2 = topic.find('.', n + 1);
 
@@ -253,9 +330,7 @@ void Bybit::sendWebsocketHeartbeat() {
 
 void Bybit::placeMarketOrder(const Order &ord) {
     std::string expires = std::to_string(
-        std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch())
-            .count()
-        + 1000);
+        duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count()+ 1000);
 
     std::string endpoint = "/v2/private/order/create";
     // pairs have to be in alphabetic order
@@ -293,9 +368,7 @@ void Bybit::placeMarketOrder(const Order &ord) {
         throw std::runtime_error("Bad API response.");
     }
 
-    position->qty += ord.qty;
-    position->timestamp = std::stol(expires);
-    position->entryPrice = (double)response["result"]["price"];
+    position->activeOrder = true;
 }
 
 void Bybit::doAutomatedTrading() {
@@ -310,11 +383,11 @@ void Bybit::doAutomatedTrading() {
             }
         }
 
-        if (strategy->checkLongEntry(candles) && position->qty == 0) {
+        if (strategy->checkLongEntry(candles) && position->qty == 0 && !position->activeOrder) {
             if (strategy->getOrderType() == "Market") {
                 placeMarketOrder(Order(strategy->getMaxQty()));
             }
-        } else if (strategy->checkShortEntry(candles) && position->qty == 0) {
+        } else if (strategy->checkShortEntry(candles) && position->qty == 0 && !position->activeOrder) {
             if (strategy->getOrderType() == "Market") {
                 placeMarketOrder(Order(-strategy->getMaxQty()));
             }
@@ -335,4 +408,3 @@ void Bybit::removeUnusedCandles() {
         }
     }
 }
-

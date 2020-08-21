@@ -46,6 +46,10 @@ class Bybit {
 
     void getCandlesApi();
 
+    void getPositionApi();
+
+    void cancelAllActiveOrders();
+
     void connect();
 
     void disconnect();

@@ -117,6 +117,9 @@ int main(int argc, char **argv) {
     beast::flat_buffer buffer;
     int websocketHeartbeatTimer = std::time(nullptr);
 
+    std::cout << "Connecting..." << std::endl;
+    bybit->connect();
+
     // Program Loop
     for (;;) {
         while (bybit->isConnected()) {
@@ -130,7 +133,7 @@ int main(int argc, char **argv) {
                 bybit->sendWebsocketHeartbeat();
             }
         }
-        sleep(1);
+        sleep(3);
         std::cout << "Attempting to (re)connect..." << std::endl;
         bybit->connect();
     }
