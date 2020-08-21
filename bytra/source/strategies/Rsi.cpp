@@ -8,14 +8,15 @@
 #include <ta-lib/ta_libc.h>
 
 Rsi::Rsi() {
-    name = "RSI only strategy";
-    description
-        = "The relative strength index (RSI) is most commonly used to indicate temporarily "
-          "overbought or oversold conditions in a market. "
-          "The RSI is a widely used technical indicator and an oscillator "
-          "that indicates a market is overbought when the RSI value is over 70 and indicates "
-          "oversold conditions when RSI readings are under 30. "
-          "We buy when the market is oversold and sell when the market is overbought.";
+    /** RSI strategy
+     * The relative strength index (RSI) is most commonly used to indicate temporarily
+     * overbought or oversold conditions in a market.
+     * The RSI is a widely used technical indicator and an oscillator
+     * that indicates a market is overbought when the RSI value is over 70 and indicates
+     * oversold conditions when RSI readings are under 30.
+     * We buy when the market is oversold and sell when the market is overbought.
+     * */
+    name = "RSI";
     timeframes = {{"1", 1000}};
     symbol = "BTCUSD";
     maxQty = 100;
@@ -24,7 +25,6 @@ Rsi::Rsi() {
 }
 
 bool Rsi::checkLongEntry(std::map<TimeFrame, std::vector<std::shared_ptr<Candle>>> &candles) {
-    auto logger = spdlog::get("basic_logger");
     auto tf = TimeFrame(timeframes[0].first, timeframes[0].second);
     double rsi_value = calculateRSI(candles[tf]);
 
@@ -37,7 +37,6 @@ bool Rsi::checkLongEntry(std::map<TimeFrame, std::vector<std::shared_ptr<Candle>
 }
 
 bool Rsi::checkShortEntry(std::map<TimeFrame, std::vector<std::shared_ptr<Candle>>> &candles) {
-    auto logger = spdlog::get("basic_logger");
     auto tf = TimeFrame(timeframes[0].first, timeframes[0].second);
     double rsi_value = calculateRSI(candles[tf]);
 
@@ -51,7 +50,6 @@ bool Rsi::checkShortEntry(std::map<TimeFrame, std::vector<std::shared_ptr<Candle
 
 bool Rsi::checkExit(std::map<TimeFrame, std::vector<std::shared_ptr<Candle>>> &candles,
                     std::shared_ptr<Position> position) {
-    auto logger = spdlog::get("basic_logger");
     auto tf = TimeFrame(timeframes[0].first, timeframes[0].second);
     double rsi_value = calculateRSI(candles[tf]);
 
@@ -71,7 +69,7 @@ double Rsi::calculateRSI(std::vector<std::shared_ptr<Candle>> &candles) {
         close.push_back(candle->close);
     }
 
-    int endIdx = close.size() - 1;
+    int endIdx = (int) close.size() - 1;
     int startIdx = endIdx - timeframes[0].second + 1;
     int rsi_length = 10;
     int outBegIdx;

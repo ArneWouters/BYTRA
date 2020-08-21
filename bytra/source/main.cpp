@@ -21,16 +21,14 @@
 #include "TerminalColors.h"
 #include "strategies/Rsi.h"
 #include "strategies/Strategy.h"
+#include "strategies/Ema.h"
 
 namespace beast = boost::beast;
 
 void signal_callback_handler(int signum) {
     std::cout << std::endl;
     std::cout << "...Terminating" << std::endl;
-
-    auto logger = spdlog::get("basic_logger");
-    logger->debug("Terminating program.");
-
+    spdlog::debug("Terminating program.");
     std::cout << RED << "✗ " << RESET << "Program terminated." << std::endl;
     exit(signum);
 }
@@ -88,16 +86,16 @@ int main(int argc, char **argv) {
         tbl = toml::parse_file("data/configuration.toml");
     } catch (const toml::parse_error &err) {
         std::cerr << "Parsing failed:\n" << err << std::endl;
-        auto logger = spdlog::get("basic_logger");
-        logger->error("Parsing configuration failed");
+        spdlog::error("Parsing configuration failed");
         return 1;
     }
 
-    std::map<std::string, std::shared_ptr<Strategy>> validStrategies = {{"rsi", std::make_shared<Rsi>()}};
+    std::map<std::string, std::shared_ptr<Strategy>> validStrategies =
+            {{"rsi", std::make_shared<Rsi>()},
+             {"ema", std::make_shared<Ema>()}};
 
     if (validStrategies[strategy].get() == nullptr) {
-        auto logger = spdlog::get("basic_logger");
-        logger->error("Invalid strategy: " + strategy);
+        spdlog::error("Invalid strategy: " + strategy);
         throw std::invalid_argument("Invalid strategy: " + strategy);
     }
 

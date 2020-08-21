@@ -95,7 +95,7 @@ void Bybit::getCandlesApi() {
             }
             from = candles_tf[candles_tf.size() - 1]->timestamp + 1;
         }
-        candles_tf.pop_back();  // last candle is not finished
+        candles_tf.pop_back();  // last candle is not complete
         vec = candles_tf;
     }
 }

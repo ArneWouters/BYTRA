@@ -17,7 +17,6 @@
 class Strategy {
   protected:
     std::string name;
-    std::string description;
     std::vector<std::pair<std::string, int>> timeframes;  // keep amounts below 12k
     int maxQty;
     std::string symbol;
@@ -30,12 +29,9 @@ class Strategy {
     virtual bool checkShortEntry(std::map<TimeFrame, std::vector<std::shared_ptr<Candle>>> &candles) = 0;
 
     virtual bool checkExit(std::map<TimeFrame, std::vector<std::shared_ptr<Candle>>> &candles,
-                           std::shared_ptr<Position> position)
-        = 0;
+                           std::shared_ptr<Position> position) = 0;
 
     std::string getName() { return name; }
-
-    std::string getDescription() { return description; }
 
     std::vector<std::pair<std::string, int>> getTimeframes() { return timeframes; }
 
