@@ -39,7 +39,7 @@ Bybit::Bybit(std::string &baseUrl, std::string &apiKey, std::string &apiSecret, 
         auto it = std::find(allowedTimeframes.begin(), allowedTimeframes.end(), tf.first);
 
         if (it == allowedTimeframes.end()) {
-            spdlog::error("Bitmex::Bitmex(..) - invalid timeframe");
+            spdlog::error("Bybit::Bybit(..) - invalid timeframe");
             throw std::invalid_argument("Invalid timeframe: " + tf.first + " in strategy " + strategy->getName());
         }
         candles[TimeFrame(tf.first, tf.second)] = {};
@@ -186,7 +186,7 @@ void Bybit::readWebsocket() {
 }
 
 void Bybit::parseWebsocketMsg(const std::string &msg) {
-    //    std::cout << msg << std::endl;
+//    std::cout << msg << std::endl;
 
     dom::parser parser;
     dom::element response = parser.parse(msg);
@@ -198,7 +198,7 @@ void Bybit::parseWebsocketMsg(const std::string &msg) {
         std::string op = (std::string)response["request"]["op"];
         if (op == "auth") {
             std::cout << "Connected and authenticated with Bybit websocket " << GREEN << "✔" << RESET << std::endl;
-            spdlog::info("[WebSocket] Connected to the BitMEX Realtime API.");
+            spdlog::info("[WebSocket] Connected to the Bybit Realtime API.");
 
         } else if (op == "subscribe") {
             for (dom::element item : response["request"]["args"]) {
@@ -245,6 +245,10 @@ void Bybit::parseWebsocketMsg(const std::string &msg) {
             }
         }
     }
+}
+
+void Bybit::sendWebsocketHeartbeat() {
+    if (isConnected()) { websocket->write(net::buffer(R"({"op":"ping"})")); }
 }
 
 void Bybit::placeMarketOrder(const Order &ord) {
@@ -331,3 +335,4 @@ void Bybit::removeUnusedCandles() {
         }
     }
 }
+
