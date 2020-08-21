@@ -36,6 +36,12 @@ void signal_callback_handler(int signum) {
 }
 
 int main(int argc, char **argv) {
+    std::cout << "    ____ __  __ ______ ____   ___ " << std::endl;
+    std::cout << R"(   / __ )\ \/ //_  __// __ \ /   |)" << std::endl;
+    std::cout << R"(  / __  | \  /  / /  / /_/ // /| |)" << std::endl;
+    std::cout << " / /_/ /  / /  / /  / _, _// ___ |" << std::endl;
+    std::cout << "/_____/  /_/  /_/  /_/ |_|/_/  |_|   Made by Arne." << std::endl << std::endl;
+
     std::cout << "Setting up BYTRA" << std::endl;
     std::cout << " - CLI setup";
 
