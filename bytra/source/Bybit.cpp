@@ -111,7 +111,7 @@ void Bybit::getPositionApi() {
     cpr::CurlHolder holder;
     parameters.AddParameter({"sign", HmacEncode(parameters.content, apiSecret)}, holder);
 
-    spdlog::debug("[HTTP-GET] " + baseUrl + endpoint + parameters.content);
+    spdlog::debug("[HTTP-GET] " + baseUrl + endpoint + " - " + parameters.content);
     cpr::Response r = cpr::Get(cpr::Url{baseUrl + endpoint}, parameters);
     spdlog::debug("[RESP-" + std::to_string(r.status_code) + "] " + r.text);
 
@@ -148,7 +148,7 @@ void Bybit::cancelAllActiveOrders() {
     cpr::CurlHolder holder;
     payload.AddPair({"sign", HmacEncode(payload.content, apiSecret)}, holder);
 
-    spdlog::debug("[HTTP-POST] " + baseUrl + endpoint + payload.content);
+    spdlog::debug("[HTTP-POST] " + baseUrl + endpoint + " - " + payload.content);
     cpr::Response r = cpr::Post(cpr::Url{baseUrl + endpoint}, payload);
     spdlog::debug("[RESP-" + std::to_string(r.status_code) + "] " + r.text);
 
@@ -179,7 +179,7 @@ void Bybit::connect() {
 
     std::string auth_msg = R"({"op":"auth","args":[")" + apiKey + R"(",")" + expires + R"(",")"
                            + HmacEncode("GET/realtime" + expires, apiSecret) + R"("]})";
-    std::string msg = R"({"op": "subscribe", "args": ["position","order",)";
+    std::string msg = R"({"op": "subscribe", "args": ["position","order","orderBookL2_25.)" + strategy->getSymbol() + "\",";
 
     for (auto const &[tf, val] : candles) {
         msg.append("\"klineV2." + tf.symbol + ".");
@@ -230,7 +230,7 @@ void Bybit::connect() {
     websocket->write(net::buffer(msg));
 }
 
-void Bybit::disconnect() {
+[[maybe_unused]] void Bybit::disconnect() {
     if (!websocket) {
         return;
     }
@@ -255,7 +255,7 @@ void Bybit::readWebsocket() {
 }
 
 void Bybit::parseWebsocketMsg(const std::string &msg) {
-//    std::cout << msg << std::endl;
+    std::cout << msg << std::endl;
 
     dom::parser parser;
     dom::element response = parser.parse(msg);
@@ -320,12 +320,63 @@ void Bybit::parseWebsocketMsg(const std::string &msg) {
                     }
                 }
             }
+        } else if (topic.size() > 14 && topic.substr(0, 14) == "orderBookL2_25") {
+            std::string type = (std::string) response["type"];
+
+            if (type == "snapshot") {
+                orderBook = std::make_shared<OrderBook>();
+
+                for (dom::object item : response["data"]) {
+                    long id = (long) item["id"];
+                    double price = std::stod((std::string) item["price"]);
+                    std::string side = (std::string) item["side"];
+                    long size = (long) item["size"];
+
+                    if (side == "Sell") { orderBook->addAskEntry(id, OrderBookEntry(price, size)); }
+                    else if (side == "Buy") { orderBook->addBidEntry(id, OrderBookEntry(price, size)); }
+                }
+
+            } else if (type == "delta") {
+                for (dom::object item : response["data"]["delete"]) {
+                    long id = (long) item["id"];
+                    std::string side = (std::string) item["side"];
+
+                    if (side == "Sell") { orderBook->removeAskEntry(id); }
+                    else if (side == "Buy") { orderBook->removeBidEntry(id); }
+                }
+
+                for (dom::object item : response["data"]["update"]) {
+                    long id = (long) item["id"];
+                    std::string side = (std::string) item["side"];
+                    long size = (long) item["size"];
+
+                    if (side == "Sell") { orderBook->updateAskEntry(id, size); }
+                    else if (side == "Buy") { orderBook->updateBidEntry(id, size); }
+                }
+
+                for (dom::object item : response["data"]["insert"]) {
+                    long id = (long) item["id"];
+                    double price = std::stod((std::string) item["price"]);
+                    std::string side = (std::string) item["side"];
+                    long size = (long) item["size"];
+
+                    if (side == "Sell") { orderBook->addAskEntry(id, OrderBookEntry(price, size)); }
+                    else if (side == "Buy") { orderBook->addBidEntry(id, OrderBookEntry(price, size)); }
+                }
+            }
         }
     }
 }
 
 void Bybit::sendWebsocketHeartbeat() {
     if (isConnected()) { websocket->write(net::buffer(R"({"op":"ping"})")); }
+}
+
+void Bybit::syncOrderBook() {
+    if (isConnected()) {
+        websocket->write(net::buffer(R"({"op": "unsubscribe", "args": ["orderBookL2_25.)" + strategy->getSymbol() + R"("]})"));
+        websocket->write(net::buffer(R"({"op": "subscribe", "args": ["orderBookL2_25.)" + strategy->getSymbol() + R"("]})"));
+    }
 }
 
 void Bybit::placeMarketOrder(const Order &ord) {
