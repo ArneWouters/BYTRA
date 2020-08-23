@@ -68,9 +68,11 @@ class Bybit {
 
     void placeMarketOrder(const Order &ord);
 
-//    void placeLimitOrder(const Order &ord);
+    void placeLimitOrder(const Order &ord);
 
-//    void amendLimitOrder(const Order &ord);
+    void amendLimitOrder(const Order &ord);
+
+    void cancelActiveLimitOrder();
 
     void doAutomatedTrading();
 

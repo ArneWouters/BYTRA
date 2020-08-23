@@ -12,6 +12,7 @@ using namespace std::chrono;
 
 class Order {
 public:
+    std::string id;
     long qty;
     double price;
     std::pair<double, double> priceInterval;
@@ -27,8 +28,13 @@ public:
         this->reduce = reduce;
         this->qty = qty;
         this->slippage = slippage;
+        this->price = price;
         this->priceInterval = {price - slippage, price + slippage};
     }
+
+    [[nodiscard]] bool isSell() const { return qty < 0; }
+
+    [[nodiscard]] bool isBuy() const { return qty > 0; }
 };
 
 #endif  // MEXTRA_ORDER_H

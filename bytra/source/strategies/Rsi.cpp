@@ -19,16 +19,16 @@ Rsi::Rsi() {
     name = "RSI";
     timeframes = {{"1", 1000}};
     symbol = "BTCUSD";
-    maxQty = 100;
-    orderType = "Market";
-    slippage = 10.0;
+    qty = 100;
+    orderType = "Limit";
+    slippage = 5.0;
 }
 
 bool Rsi::checkLongEntry(std::map<TimeFrame, std::vector<std::shared_ptr<Candle>>> &candles) {
     auto tf = TimeFrame(timeframes[0].first, timeframes[0].second);
     double rsi_value = calculateRSI(candles[tf]);
 
-    if (rsi_value < 30) {
+    if (rsi_value < 50) {
         spdlog::debug("Entry Long rsi={}", rsi_value);
         return true;
     }
@@ -40,7 +40,7 @@ bool Rsi::checkShortEntry(std::map<TimeFrame, std::vector<std::shared_ptr<Candle
     auto tf = TimeFrame(timeframes[0].first, timeframes[0].second);
     double rsi_value = calculateRSI(candles[tf]);
 
-    if (rsi_value > 70) {
+    if (rsi_value > 50) {
         spdlog::debug("Entry Short rsi={}", rsi_value);
         return true;
     }

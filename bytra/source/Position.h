@@ -8,12 +8,12 @@
 #include <string>
 
 #include "Candle.h"
+#include "Order.h"
 
 class Position {
 public:
     long qty = 0;
-    std::string lastOrderId;
-    bool activeOrder = false;
+    std::shared_ptr<Order> activeOrder;
 
     Position() = default;
 

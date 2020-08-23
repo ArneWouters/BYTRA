@@ -122,9 +122,8 @@ int main(int argc, char **argv) {
     for (;;) {
         while (bybit->isConnected()) {
             bybit->readWebsocket();
-//            bybit->doAutomatedTrading();
-//            bybit->removeUnusedCandles();
-
+            bybit->doAutomatedTrading();
+            bybit->removeUnusedCandles();
 
             int currentTime = std::time(nullptr);
 
@@ -134,7 +133,7 @@ int main(int argc, char **argv) {
                 bybit->sendWebsocketHeartbeat();
             }
 
-            if (currentTime - websocketOrderBookSyncTimer > 10) {
+            if (currentTime - websocketOrderBookSyncTimer > 3600) {
                 websocketOrderBookSyncTimer = currentTime;
                 bybit->syncOrderBook();
             }
