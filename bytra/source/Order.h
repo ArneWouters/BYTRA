@@ -5,13 +5,13 @@
 #ifndef MEXTRA_ORDER_H
 #define MEXTRA_ORDER_H
 
-#include <string>
 #include <chrono>
+#include <string>
 
 using namespace std::chrono;
 
 class Order {
-public:
+  public:
     std::string id;
     long qty;
     double price;

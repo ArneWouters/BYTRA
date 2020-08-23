@@ -16,9 +16,9 @@
 #include <vector>
 
 #include "Candle.h"
+#include "OrderBook.h"
 #include "Position.h"
 #include "strategies/Strategy.h"
-#include "OrderBook.h"
 
 namespace beast = boost::beast;          // from <boost/beast.hpp>
 namespace websocket = beast::websocket;  // from <boost/beast/websocket.hpp>

@@ -8,7 +8,7 @@
 #include "Strategy.h"
 
 class Ema : public Strategy {
-public:
+  public:
     Ema();
 
     bool checkLongEntry(std::map<TimeFrame, std::vector<std::shared_ptr<Candle>>> &candles) override;
@@ -19,8 +19,6 @@ public:
                    std::shared_ptr<Position> position) override;
 
     std::pair<double, double> calculateEMA(std::vector<std::shared_ptr<Candle>> &candles, const int &timePeriod);
-
 };
 
-
-#endif //BYTRA_EMA_H
+#endif  // BYTRA_EMA_H

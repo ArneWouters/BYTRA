@@ -53,8 +53,7 @@ Bybit::Bybit(std::string &baseUrl, std::string &apiKey, std::string &apiSecret, 
 
 void Bybit::getCandlesApi() {
     for (auto &[tf, vec] : candles) {
-        long currentTime
-            = duration_cast<seconds>(system_clock::now().time_since_epoch()).count();
+        long currentTime = duration_cast<seconds>(system_clock::now().time_since_epoch()).count();
         long from = currentTime - (tf.ticks * (tf.amount + 1) * 60);
         std::vector<std::shared_ptr<Candle>> candles_tf;
 
@@ -101,13 +100,12 @@ void Bybit::getCandlesApi() {
 }
 
 void Bybit::getPositionApi() {
-    std::string expires = std::to_string(
-            duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count()+ 1000);
+    std::string expires
+        = std::to_string(duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count() + 1000);
 
     std::string endpoint = "/v2/private/position/list";
     // pairs have to be in alphabetic order
-    auto parameters
-            = cpr::Parameters{{"api_key", apiKey}, {"symbol", strategy->getSymbol()}, {"timestamp", expires}};
+    auto parameters = cpr::Parameters{{"api_key", apiKey}, {"symbol", strategy->getSymbol()}, {"timestamp", expires}};
 
     cpr::CurlHolder holder;
     parameters.AddParameter({"sign", HmacEncode(parameters.content, apiSecret)}, holder);
@@ -131,20 +129,21 @@ void Bybit::getPositionApi() {
         throw std::runtime_error("Bad API response.");
     }
 
-    std::string side = (std::string) response["result"]["side"];
-    long qty = (long) response["result"]["size"];
-    if (side == "Sell") { qty = -qty; }
+    std::string side = (std::string)response["result"]["side"];
+    long qty = (long)response["result"]["size"];
+    if (side == "Sell") {
+        qty = -qty;
+    }
     position->qty = qty;
 }
 
 void Bybit::cancelAllActiveOrders() {
-    std::string expires = std::to_string(
-            duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count()+ 1000);
+    std::string expires
+        = std::to_string(duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count() + 1000);
 
     std::string endpoint = "/v2/private/order/cancelAll";
     // pairs have to be in alphabetic order
-    cpr::Payload payload
-            = cpr::Payload{{"api_key", apiKey}, {"symbol", strategy->getSymbol()}, {"timestamp", expires}};
+    cpr::Payload payload = cpr::Payload{{"api_key", apiKey}, {"symbol", strategy->getSymbol()}, {"timestamp", expires}};
 
     cpr::CurlHolder holder;
     payload.AddPair({"sign", HmacEncode(payload.content, apiSecret)}, holder);
@@ -175,12 +174,13 @@ void Bybit::connect() {
 
     const std::string host = websocketHost;
     const std::string port = "443";
-    std::string expires = std::to_string(
-        ::duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count() + 2000);
+    std::string expires
+        = std::to_string(::duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count() + 2000);
 
     std::string auth_msg = R"({"op":"auth","args":[")" + apiKey + R"(",")" + expires + R"(",")"
                            + HmacEncode("GET/realtime" + expires, apiSecret) + R"("]})";
-    std::string msg = R"({"op": "subscribe", "args": ["position","order","orderBookL2_25.)" + strategy->getSymbol() + "\",";
+    std::string msg
+        = R"({"op": "subscribe", "args": ["position","order","orderBookL2_25.)" + strategy->getSymbol() + "\",";
 
     for (auto const &[tf, val] : candles) {
         msg.append("\"klineV2." + tf.symbol + ".");
@@ -256,7 +256,7 @@ void Bybit::readWebsocket() {
 }
 
 void Bybit::parseWebsocketMsg(const std::string &msg) {
-//    std::cout << msg << std::endl;
+    //    std::cout << msg << std::endl;
 
     dom::parser parser;
     dom::element response = parser.parse(msg);
@@ -284,22 +284,25 @@ void Bybit::parseWebsocketMsg(const std::string &msg) {
 
         if (topic == "position") {
             for (dom::object item : response["data"]) {
-                std::string side = (std::string) item["side"];
-                long qty = (long) item["size"];
-                if (side == "Sell") { qty = -qty; }
+                std::string side = (std::string)item["side"];
+                long qty = (long)item["size"];
+                if (side == "Sell") {
+                    qty = -qty;
+                }
                 position->qty = qty;
             }
 
         } else if (topic == "order") {
             for (dom::object item : response["data"]) {
-                std::string orderType = (std::string) item["order_type"];
-                std::string orderStatus = (std::string) item["order_status"];
+                std::string orderType = (std::string)item["order_type"];
+                std::string orderStatus = (std::string)item["order_status"];
                 double askPrice = orderBook->askPrice();
                 double bidPrice = orderBook->bidPrice();
 
                 if (orderStatus == "Cancelled" && position->activeOrder != nullptr) {
                     if (position->activeOrder->isBuy()) {
-                        if (bidPrice >= position->activeOrder->priceInterval.first && bidPrice <= position->activeOrder->priceInterval.second) {
+                        if (bidPrice >= position->activeOrder->priceInterval.first
+                            && bidPrice <= position->activeOrder->priceInterval.second) {
                             position->activeOrder->price = bidPrice;
                             placeLimitOrder(*position->activeOrder);
                         } else if (position->activeOrder->reduce) {
@@ -308,7 +311,8 @@ void Bybit::parseWebsocketMsg(const std::string &msg) {
                             position->activeOrder = nullptr;
                         }
                     } else {
-                        if (askPrice >= position->activeOrder->priceInterval.first && askPrice <= position->activeOrder->priceInterval.second) {
+                        if (askPrice >= position->activeOrder->priceInterval.first
+                            && askPrice <= position->activeOrder->priceInterval.second) {
                             position->activeOrder->price = askPrice;
                             placeLimitOrder(*position->activeOrder);
                         } else if (position->activeOrder->reduce) {
@@ -353,47 +357,59 @@ void Bybit::parseWebsocketMsg(const std::string &msg) {
                 }
             }
         } else if (topic.size() > 14 && topic.substr(0, 14) == "orderBookL2_25") {
-            std::string type = (std::string) response["type"];
+            std::string type = (std::string)response["type"];
 
             if (type == "snapshot") {
                 orderBook = std::make_shared<OrderBook>();
 
                 for (dom::object item : response["data"]) {
-                    long id = (long) item["id"];
-                    double price = std::stod((std::string) item["price"]);
-                    std::string side = (std::string) item["side"];
-                    long size = (long) item["size"];
+                    long id = (long)item["id"];
+                    double price = std::stod((std::string)item["price"]);
+                    std::string side = (std::string)item["side"];
+                    long size = (long)item["size"];
 
-                    if (side == "Sell") { orderBook->addAskEntry(id, OrderBookEntry(price, size)); }
-                    else if (side == "Buy") { orderBook->addBidEntry(id, OrderBookEntry(price, size)); }
+                    if (side == "Sell") {
+                        orderBook->addAskEntry(id, OrderBookEntry(price, size));
+                    } else if (side == "Buy") {
+                        orderBook->addBidEntry(id, OrderBookEntry(price, size));
+                    }
                 }
 
             } else if (type == "delta") {
                 for (dom::object item : response["data"]["delete"]) {
-                    long id = (long) item["id"];
-                    std::string side = (std::string) item["side"];
+                    long id = (long)item["id"];
+                    std::string side = (std::string)item["side"];
 
-                    if (side == "Sell") { orderBook->removeAskEntry(id); }
-                    else if (side == "Buy") { orderBook->removeBidEntry(id); }
+                    if (side == "Sell") {
+                        orderBook->removeAskEntry(id);
+                    } else if (side == "Buy") {
+                        orderBook->removeBidEntry(id);
+                    }
                 }
 
                 for (dom::object item : response["data"]["update"]) {
-                    long id = (long) item["id"];
-                    std::string side = (std::string) item["side"];
-                    long size = (long) item["size"];
+                    long id = (long)item["id"];
+                    std::string side = (std::string)item["side"];
+                    long size = (long)item["size"];
 
-                    if (side == "Sell") { orderBook->updateAskEntry(id, size); }
-                    else if (side == "Buy") { orderBook->updateBidEntry(id, size); }
+                    if (side == "Sell") {
+                        orderBook->updateAskEntry(id, size);
+                    } else if (side == "Buy") {
+                        orderBook->updateBidEntry(id, size);
+                    }
                 }
 
                 for (dom::object item : response["data"]["insert"]) {
-                    long id = (long) item["id"];
-                    double price = std::stod((std::string) item["price"]);
-                    std::string side = (std::string) item["side"];
-                    long size = (long) item["size"];
+                    long id = (long)item["id"];
+                    double price = std::stod((std::string)item["price"]);
+                    std::string side = (std::string)item["side"];
+                    long size = (long)item["size"];
 
-                    if (side == "Sell") { orderBook->addAskEntry(id, OrderBookEntry(price, size)); }
-                    else if (side == "Buy") { orderBook->addBidEntry(id, OrderBookEntry(price, size)); }
+                    if (side == "Sell") {
+                        orderBook->addAskEntry(id, OrderBookEntry(price, size));
+                    } else if (side == "Buy") {
+                        orderBook->addBidEntry(id, OrderBookEntry(price, size));
+                    }
                 }
             }
         }
@@ -401,19 +417,23 @@ void Bybit::parseWebsocketMsg(const std::string &msg) {
 }
 
 void Bybit::sendWebsocketHeartbeat() {
-    if (isConnected()) { websocket->write(net::buffer(R"({"op":"ping"})")); }
+    if (isConnected()) {
+        websocket->write(net::buffer(R"({"op":"ping"})"));
+    }
 }
 
 void Bybit::syncOrderBook() {
     if (isConnected()) {
-        websocket->write(net::buffer(R"({"op": "unsubscribe", "args": ["orderBookL2_25.)" + strategy->getSymbol() + R"("]})"));
-        websocket->write(net::buffer(R"({"op": "subscribe", "args": ["orderBookL2_25.)" + strategy->getSymbol() + R"("]})"));
+        websocket->write(
+            net::buffer(R"({"op": "unsubscribe", "args": ["orderBookL2_25.)" + strategy->getSymbol() + R"("]})"));
+        websocket->write(
+            net::buffer(R"({"op": "subscribe", "args": ["orderBookL2_25.)" + strategy->getSymbol() + R"("]})"));
     }
 }
 
 void Bybit::placeMarketOrder(const Order &ord) {
-    std::string expires = std::to_string(
-        duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count()+ 1000);
+    std::string expires
+        = std::to_string(duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count() + 1000);
 
     std::string endpoint = "/v2/private/order/create";
     // pairs have to be in alphabetic order
@@ -453,14 +473,15 @@ void Bybit::placeMarketOrder(const Order &ord) {
 }
 
 void Bybit::placeLimitOrder(const Order &ord) {
-    std::string expires = std::to_string(
-            duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count()+ 1000);
+    std::string expires
+        = std::to_string(duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count() + 1000);
 
     std::string endpoint = "/v2/private/order/create";
     // pairs have to be in alphabetic order
-    cpr::Payload payload
-            = cpr::Payload{{"api_key", apiKey}, {"order_type", "Limit"},
-                           {"price", std::to_string(ord.price)}, {"qty", std::to_string(std::abs(ord.qty))}};
+    cpr::Payload payload = cpr::Payload{{"api_key", apiKey},
+                                        {"order_type", "Limit"},
+                                        {"price", std::to_string(ord.price)},
+                                        {"qty", std::to_string(std::abs(ord.qty))}};
 
     cpr::CurlHolder holder;
 
@@ -494,20 +515,20 @@ void Bybit::placeLimitOrder(const Order &ord) {
     }
 
     position->activeOrder = std::make_shared<Order>(ord);
-    position->activeOrder->id = (std::string) response["result"]["order_id"];
-
+    position->activeOrder->id = (std::string)response["result"]["order_id"];
 }
 
 void Bybit::amendLimitOrder(const Order &ord) {
-    std::string expires = std::to_string(
-            duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count()+ 1000);
+    std::string expires
+        = std::to_string(duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count() + 1000);
 
     std::string endpoint = "/open-api/order/replace";
     // pairs have to be in alphabetic order
-    cpr::Payload payload
-            = cpr::Payload{{"api_key", apiKey}, {"order_id", ord.id},
-                           {"p_r_price", std::to_string(ord.price)}, {"symbol", strategy->getSymbol()},
-                           {"timestamp", expires}};
+    cpr::Payload payload = cpr::Payload{{"api_key", apiKey},
+                                        {"order_id", ord.id},
+                                        {"p_r_price", std::to_string(ord.price)},
+                                        {"symbol", strategy->getSymbol()},
+                                        {"timestamp", expires}};
 
     cpr::CurlHolder holder;
     payload.AddPair({"sign", HmacEncode(payload.content, apiSecret)}, holder);
@@ -533,14 +554,15 @@ void Bybit::amendLimitOrder(const Order &ord) {
 }
 
 void Bybit::cancelActiveLimitOrder() {
-    std::string expires = std::to_string(
-            duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count()+ 1000);
+    std::string expires
+        = std::to_string(duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count() + 1000);
 
     std::string endpoint = "/v2/private/order/cancel";
     // pairs have to be in alphabetic order
-    cpr::Payload payload
-            = cpr::Payload{{"api_key", apiKey}, {"order_id", position->activeOrder->id},
-                           {"symbol", strategy->getSymbol()}, {"timestamp", expires}};
+    cpr::Payload payload = cpr::Payload{{"api_key", apiKey},
+                                        {"order_id", position->activeOrder->id},
+                                        {"symbol", strategy->getSymbol()},
+                                        {"timestamp", expires}};
 
     cpr::CurlHolder holder;
     payload.AddPair({"sign", HmacEncode(payload.content, apiSecret)}, holder);

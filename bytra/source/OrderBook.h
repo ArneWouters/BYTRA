@@ -20,11 +20,11 @@ struct OrderBookEntry {
 };
 
 class OrderBook {
-private:
+  private:
     std::map<long, OrderBookEntry> askSide;
     std::map<long, OrderBookEntry> bidSide;
 
-public:
+  public:
     OrderBook() = default;
 
     void addAskEntry(const long &id, const OrderBookEntry &entry) { askSide[id] = entry; }
@@ -42,7 +42,7 @@ public:
     double askPrice() {
         double askPrice = std::numeric_limits<double>::infinity();
 
-        for( auto const& [key, val]: askSide) {
+        for (auto const &[key, val] : askSide) {
             if (val.price < askPrice) {
                 askPrice = val.price;
             }
@@ -54,7 +54,7 @@ public:
     double bidPrice() {
         double bidPrice = 0.0;
 
-        for( auto const& [key, val]: bidSide) {
+        for (auto const &[key, val] : bidSide) {
             if (val.price > bidPrice) {
                 bidPrice = val.price;
             }
@@ -66,4 +66,4 @@ public:
     bool isEmpty() { return askSide.empty() || bidSide.empty(); }
 };
 
-#endif //BYTRA_ORDERBOOK_H
+#endif  // BYTRA_ORDERBOOK_H

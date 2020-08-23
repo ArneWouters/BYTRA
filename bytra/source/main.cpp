@@ -19,9 +19,9 @@
 
 #include "Bybit.h"
 #include "TerminalColors.h"
+#include "strategies/Ema.h"
 #include "strategies/Rsi.h"
 #include "strategies/Strategy.h"
-#include "strategies/Ema.h"
 
 namespace beast = boost::beast;
 
@@ -89,9 +89,8 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    std::map<std::string, std::shared_ptr<Strategy>> validStrategies =
-            {{"rsi", std::make_shared<Rsi>()},
-             {"ema", std::make_shared<Ema>()}};
+    std::map<std::string, std::shared_ptr<Strategy>> validStrategies
+        = {{"rsi", std::make_shared<Rsi>()}, {"ema", std::make_shared<Ema>()}};
 
     if (validStrategies[strategy].get() == nullptr) {
         spdlog::error("Invalid strategy: " + strategy);

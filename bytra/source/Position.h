@@ -11,7 +11,7 @@
 #include "Order.h"
 
 class Position {
-public:
+  public:
     long qty = 0;
     std::shared_ptr<Order> activeOrder;
 

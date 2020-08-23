@@ -69,7 +69,7 @@ double Rsi::calculateRSI(std::vector<std::shared_ptr<Candle>> &candles) {
         close.push_back(candle->close);
     }
 
-    int endIdx = (int) close.size() - 1;
+    int endIdx = (int)close.size() - 1;
     int startIdx = endIdx - timeframes[0].second + 1;
     int rsi_length = 10;
     int outBegIdx;
