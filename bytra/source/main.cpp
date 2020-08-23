@@ -34,6 +34,7 @@ void signal_callback_handler(int signum) {
 }
 
 int main(int argc, char **argv) {
+    std::ios_base::sync_with_stdio(false);
     std::cout << "    ____ __  __ ______ ____   ___ " << std::endl;
     std::cout << R"(   / __ )\ \/ //_  __// __ \ /   |)" << std::endl;
     std::cout << R"(  / __  | \  /  / /  / /_/ // /| |)" << std::endl;
@@ -41,7 +42,6 @@ int main(int argc, char **argv) {
     std::cout << "/_____/  /_/  /_/  /_/ |_|/_/  |_|   Made by Arne." << std::endl << std::endl;
 
     std::cout << "Setting up BYTRA" << std::endl;
-    std::cout << " - CLI setup";
 
     // CLI setup
     CLI::App app("BYTRA");
@@ -55,8 +55,7 @@ int main(int argc, char **argv) {
     // Register signal and signal handler
     signal(SIGINT, signal_callback_handler);
 
-    std::cout << GREEN << " ✔" << RESET << std::endl;
-    std::cout << " - Logger setup";
+    std::cout << " - Logging setup" << std::flush;
 
     // spdlog setup
     try {
@@ -78,7 +77,7 @@ int main(int argc, char **argv) {
     }
 
     std::cout << GREEN << " ✔" << RESET << std::endl;
-    std::cout << " - Parsing configuration file: ";
+    std::cout << " - Parsing configuration file: " << std::flush;
 
     // Parsing configuration file
     toml::table tbl;
@@ -100,7 +99,7 @@ int main(int argc, char **argv) {
     }
 
     std::cout << "Strategy found! " << GREEN << "✔" << RESET << std::endl;
-    std::cout << " - Setting up strategy";
+    std::cout << " - Setting up strategy" << std::flush;
 
     std::string baseUrl = *tbl["bybit-testnet"]["baseUrl"].value<std::string>();
     std::string websocketHost = *tbl["bybit-testnet"]["websocketHost"].value<std::string>();
@@ -133,6 +132,7 @@ int main(int argc, char **argv) {
                 bybit->sendWebsocketHeartbeat();
             }
 
+            // Sync order book after an hour
             if (currentTime - websocketOrderBookSyncTimer > 3600) {
                 websocketOrderBookSyncTimer = currentTime;
                 bybit->syncOrderBook();

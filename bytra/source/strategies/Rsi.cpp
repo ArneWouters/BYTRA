@@ -28,7 +28,7 @@ bool Rsi::checkLongEntry(std::map<TimeFrame, std::vector<std::shared_ptr<Candle>
     auto tf = TimeFrame(timeframes[0].first, timeframes[0].second);
     double rsi_value = calculateRSI(candles[tf]);
 
-    if (rsi_value < 50) {
+    if (rsi_value < 30) {
         spdlog::debug("Entry Long rsi={}", rsi_value);
         return true;
     }
@@ -40,7 +40,7 @@ bool Rsi::checkShortEntry(std::map<TimeFrame, std::vector<std::shared_ptr<Candle
     auto tf = TimeFrame(timeframes[0].first, timeframes[0].second);
     double rsi_value = calculateRSI(candles[tf]);
 
-    if (rsi_value > 50) {
+    if (rsi_value > 70) {
         spdlog::debug("Entry Short rsi={}", rsi_value);
         return true;
     }
