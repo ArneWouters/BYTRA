@@ -18,6 +18,7 @@
 #include "Candle.h"
 #include "Position.h"
 #include "strategies/Strategy.h"
+#include "OrderBook.h"
 
 namespace beast = boost::beast;          // from <boost/beast.hpp>
 namespace websocket = beast::websocket;  // from <boost/beast/websocket.hpp>
@@ -38,6 +39,7 @@ class Bybit {
     std::shared_ptr<websocket::stream<ssl::stream<tcp::socket>>> websocket;
     std::shared_ptr<Position> position;
     std::shared_ptr<Strategy> strategy;
+    std::shared_ptr<OrderBook> orderBook;
     bool newCandleAdded = true;
 
   public:
@@ -52,7 +54,7 @@ class Bybit {
 
     void connect();
 
-    void disconnect();
+    [[maybe_unused]] void disconnect();
 
     bool isConnected();
 
@@ -62,7 +64,15 @@ class Bybit {
 
     void sendWebsocketHeartbeat();
 
+    void syncOrderBook();
+
     void placeMarketOrder(const Order &ord);
+
+    void placeLimitOrder(const Order &ord);
+
+    void amendLimitOrder(const Order &ord);
+
+    void cancelActiveLimitOrder();
 
     void doAutomatedTrading();
 

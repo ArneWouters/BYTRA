@@ -17,7 +17,7 @@ Ema::Ema() {
     name = "EMA";
     timeframes = {{"1", 1000}};
     symbol = "BTCUSD";
-    maxQty = 100;
+    qty = 100;
     orderType = "Market";
     slippage = 10.0;
 }

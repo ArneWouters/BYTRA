@@ -48,6 +48,7 @@ Bybit::Bybit(std::string &baseUrl, std::string &apiKey, std::string &apiSecret, 
     getCandlesApi();
 
     position = std::make_shared<Position>();
+    orderBook = std::make_shared<OrderBook>();
 }
 
 void Bybit::getCandlesApi() {
@@ -111,7 +112,7 @@ void Bybit::getPositionApi() {
     cpr::CurlHolder holder;
     parameters.AddParameter({"sign", HmacEncode(parameters.content, apiSecret)}, holder);
 
-    spdlog::debug("[HTTP-GET] " + baseUrl + endpoint + parameters.content);
+    spdlog::debug("[HTTP-GET] " + baseUrl + endpoint + " - " + parameters.content);
     cpr::Response r = cpr::Get(cpr::Url{baseUrl + endpoint}, parameters);
     spdlog::debug("[RESP-" + std::to_string(r.status_code) + "] " + r.text);
 
@@ -148,7 +149,7 @@ void Bybit::cancelAllActiveOrders() {
     cpr::CurlHolder holder;
     payload.AddPair({"sign", HmacEncode(payload.content, apiSecret)}, holder);
 
-    spdlog::debug("[HTTP-POST] " + baseUrl + endpoint + payload.content);
+    spdlog::debug("[HTTP-POST] " + baseUrl + endpoint + " - " + payload.content);
     cpr::Response r = cpr::Post(cpr::Url{baseUrl + endpoint}, payload);
     spdlog::debug("[RESP-" + std::to_string(r.status_code) + "] " + r.text);
 
@@ -175,11 +176,11 @@ void Bybit::connect() {
     const std::string host = websocketHost;
     const std::string port = "443";
     std::string expires = std::to_string(
-        ::duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count() + 1000);
+        ::duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count() + 2000);
 
     std::string auth_msg = R"({"op":"auth","args":[")" + apiKey + R"(",")" + expires + R"(",")"
                            + HmacEncode("GET/realtime" + expires, apiSecret) + R"("]})";
-    std::string msg = R"({"op": "subscribe", "args": ["position","order",)";
+    std::string msg = R"({"op": "subscribe", "args": ["position","order","orderBookL2_25.)" + strategy->getSymbol() + "\",";
 
     for (auto const &[tf, val] : candles) {
         msg.append("\"klineV2." + tf.symbol + ".");
@@ -230,7 +231,7 @@ void Bybit::connect() {
     websocket->write(net::buffer(msg));
 }
 
-void Bybit::disconnect() {
+[[maybe_unused]] void Bybit::disconnect() {
     if (!websocket) {
         return;
     }
@@ -289,6 +290,37 @@ void Bybit::parseWebsocketMsg(const std::string &msg) {
                 position->qty = qty;
             }
 
+        } else if (topic == "order") {
+            for (dom::object item : response["data"]) {
+                std::string orderType = (std::string) item["order_type"];
+                std::string orderStatus = (std::string) item["order_status"];
+                double askPrice = orderBook->askPrice();
+                double bidPrice = orderBook->bidPrice();
+
+                if (orderStatus == "Cancelled" && position->activeOrder != nullptr) {
+                    if (position->activeOrder->isBuy()) {
+                        if (bidPrice >= position->activeOrder->priceInterval.first && bidPrice <= position->activeOrder->priceInterval.second) {
+                            position->activeOrder->price = bidPrice;
+                            placeLimitOrder(*position->activeOrder);
+                        } else if (position->activeOrder->reduce) {
+                            placeMarketOrder(*position->activeOrder);
+                        } else {
+                            position->activeOrder = nullptr;
+                        }
+                    } else {
+                        if (askPrice >= position->activeOrder->priceInterval.first && askPrice <= position->activeOrder->priceInterval.second) {
+                            position->activeOrder->price = askPrice;
+                            placeLimitOrder(*position->activeOrder);
+                        } else if (position->activeOrder->reduce) {
+                            placeMarketOrder(*position->activeOrder);
+                        } else {
+                            position->activeOrder = nullptr;
+                        }
+                    }
+                } else if (orderStatus == "Filled") {
+                    position->activeOrder = nullptr;
+                }
+            }
         } else if (topic.size() > 7 && topic.substr(0, 7) == "klineV2") {
             std::string::size_type n = topic.find('.');
             std::string::size_type n2 = topic.find('.', n + 1);
@@ -320,12 +352,63 @@ void Bybit::parseWebsocketMsg(const std::string &msg) {
                     }
                 }
             }
+        } else if (topic.size() > 14 && topic.substr(0, 14) == "orderBookL2_25") {
+            std::string type = (std::string) response["type"];
+
+            if (type == "snapshot") {
+                orderBook = std::make_shared<OrderBook>();
+
+                for (dom::object item : response["data"]) {
+                    long id = (long) item["id"];
+                    double price = std::stod((std::string) item["price"]);
+                    std::string side = (std::string) item["side"];
+                    long size = (long) item["size"];
+
+                    if (side == "Sell") { orderBook->addAskEntry(id, OrderBookEntry(price, size)); }
+                    else if (side == "Buy") { orderBook->addBidEntry(id, OrderBookEntry(price, size)); }
+                }
+
+            } else if (type == "delta") {
+                for (dom::object item : response["data"]["delete"]) {
+                    long id = (long) item["id"];
+                    std::string side = (std::string) item["side"];
+
+                    if (side == "Sell") { orderBook->removeAskEntry(id); }
+                    else if (side == "Buy") { orderBook->removeBidEntry(id); }
+                }
+
+                for (dom::object item : response["data"]["update"]) {
+                    long id = (long) item["id"];
+                    std::string side = (std::string) item["side"];
+                    long size = (long) item["size"];
+
+                    if (side == "Sell") { orderBook->updateAskEntry(id, size); }
+                    else if (side == "Buy") { orderBook->updateBidEntry(id, size); }
+                }
+
+                for (dom::object item : response["data"]["insert"]) {
+                    long id = (long) item["id"];
+                    double price = std::stod((std::string) item["price"]);
+                    std::string side = (std::string) item["side"];
+                    long size = (long) item["size"];
+
+                    if (side == "Sell") { orderBook->addAskEntry(id, OrderBookEntry(price, size)); }
+                    else if (side == "Buy") { orderBook->addBidEntry(id, OrderBookEntry(price, size)); }
+                }
+            }
         }
     }
 }
 
 void Bybit::sendWebsocketHeartbeat() {
     if (isConnected()) { websocket->write(net::buffer(R"({"op":"ping"})")); }
+}
+
+void Bybit::syncOrderBook() {
+    if (isConnected()) {
+        websocket->write(net::buffer(R"({"op": "unsubscribe", "args": ["orderBookL2_25.)" + strategy->getSymbol() + R"("]})"));
+        websocket->write(net::buffer(R"({"op": "subscribe", "args": ["orderBookL2_25.)" + strategy->getSymbol() + R"("]})"));
+    }
 }
 
 void Bybit::placeMarketOrder(const Order &ord) {
@@ -367,32 +450,175 @@ void Bybit::placeMarketOrder(const Order &ord) {
         spdlog::error("Bybit::placeMarketOrder - bad response - " + (std::string)response["ret_msg"]);
         throw std::runtime_error("Bad API response.");
     }
+}
 
-    position->activeOrder = true;
+void Bybit::placeLimitOrder(const Order &ord) {
+    std::string expires = std::to_string(
+            duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count()+ 1000);
+
+    std::string endpoint = "/v2/private/order/create";
+    // pairs have to be in alphabetic order
+    cpr::Payload payload
+            = cpr::Payload{{"api_key", apiKey}, {"order_type", "Limit"},
+                           {"price", std::to_string(ord.price)}, {"qty", std::to_string(std::abs(ord.qty))}};
+
+    cpr::CurlHolder holder;
+
+    if (ord.reduce) {
+        payload.AddPair({"reduce_only", "true"}, holder);
+    }
+
+    payload.AddPair({"side", ord.qty > 0 ? "Buy" : "Sell"}, holder);
+    payload.AddPair({"symbol", strategy->getSymbol()}, holder);
+    payload.AddPair({"time_in_force", "PostOnly"}, holder);
+    payload.AddPair({"timestamp", expires}, holder);
+    payload.AddPair({"sign", HmacEncode(payload.content, apiSecret)}, holder);
+
+    spdlog::debug("[HTTP-POST] " + baseUrl + endpoint + payload.content);
+    cpr::Response r = cpr::Post(cpr::Url{baseUrl + endpoint}, payload);
+    spdlog::debug("[RESP-" + std::to_string(r.status_code) + "] " + r.text);
+
+    if (r.status_code != 200) {
+        spdlog::error("Bybit::placeLimitOrder - bad response - " + r.text);
+        throw std::runtime_error("Bad API response.");
+    }
+
+    dom::parser parser;
+    dom::element response = parser.parse(r.text);
+
+    int retCode = response["ret_code"].get_int64();
+
+    if (retCode != 0) {
+        spdlog::error("Bybit::placeLimitOrder - bad response - " + (std::string)response["ret_msg"]);
+        throw std::runtime_error("Bad API response.");
+    }
+
+    position->activeOrder = std::make_shared<Order>(ord);
+    position->activeOrder->id = (std::string) response["result"]["order_id"];
+
+}
+
+void Bybit::amendLimitOrder(const Order &ord) {
+    std::string expires = std::to_string(
+            duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count()+ 1000);
+
+    std::string endpoint = "/open-api/order/replace";
+    // pairs have to be in alphabetic order
+    cpr::Payload payload
+            = cpr::Payload{{"api_key", apiKey}, {"order_id", ord.id},
+                           {"p_r_price", std::to_string(ord.price)}, {"symbol", strategy->getSymbol()},
+                           {"timestamp", expires}};
+
+    cpr::CurlHolder holder;
+    payload.AddPair({"sign", HmacEncode(payload.content, apiSecret)}, holder);
+
+    spdlog::debug("[HTTP-POST] " + baseUrl + endpoint + payload.content);
+    cpr::Response r = cpr::Post(cpr::Url{baseUrl + endpoint}, payload);
+    spdlog::debug("[RESP-" + std::to_string(r.status_code) + "] " + r.text);
+
+    if (r.status_code != 200) {
+        spdlog::error("Bybit::amendLimitOrder - bad response - " + r.text);
+        throw std::runtime_error("Bad API response.");
+    }
+
+    dom::parser parser;
+    dom::element response = parser.parse(r.text);
+
+    int retCode = response["ret_code"].get_int64();
+
+    if (retCode != 0) {
+        spdlog::error("Bybit::amendLimitOrder - bad response - " + (std::string)response["ret_msg"]);
+        throw std::runtime_error("Bad API response.");
+    }
+}
+
+void Bybit::cancelActiveLimitOrder() {
+    std::string expires = std::to_string(
+            duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count()+ 1000);
+
+    std::string endpoint = "/v2/private/order/cancel";
+    // pairs have to be in alphabetic order
+    cpr::Payload payload
+            = cpr::Payload{{"api_key", apiKey}, {"order_id", position->activeOrder->id},
+                           {"symbol", strategy->getSymbol()}, {"timestamp", expires}};
+
+    cpr::CurlHolder holder;
+    payload.AddPair({"sign", HmacEncode(payload.content, apiSecret)}, holder);
+
+    spdlog::debug("[HTTP-POST] " + baseUrl + endpoint + payload.content);
+    cpr::Response r = cpr::Post(cpr::Url{baseUrl + endpoint}, payload);
+    spdlog::debug("[RESP-" + std::to_string(r.status_code) + "] " + r.text);
+
+    if (r.status_code != 200) {
+        spdlog::error("Bybit::cancelLimitOrder - bad response - " + r.text);
+        throw std::runtime_error("Bad API response.");
+    }
+
+    dom::parser parser;
+    dom::element response = parser.parse(r.text);
+
+    int retCode = response["ret_code"].get_int64();
+
+    if (retCode != 0) {
+        spdlog::error("Bybit::cancelLimitOrder - bad response - " + (std::string)response["ret_msg"]);
+        throw std::runtime_error("Bad API response.");
+    }
 }
 
 void Bybit::doAutomatedTrading() {
     if (newCandleAdded) {
+        newCandleAdded = false;
+
         if (position->qty != 0) {
             auto exit = strategy->checkExit(candles, position);
 
             if (exit) {
+                if (position->activeOrder && !position->activeOrder->reduce) {
+                    cancelActiveLimitOrder();
+                }
+
                 if (strategy->getOrderType() == "Market") {
                     placeMarketOrder(Order(-position->qty, true));
+
+                } else if (strategy->getOrderType() == "Limit" && !orderBook->isEmpty() && !position->activeOrder) {
+                    double price = position->qty > 0 ? orderBook->askPrice() : orderBook->bidPrice();
+                    Order ord(price, -position->qty, strategy->getSlippage(), true);
+                    placeLimitOrder(ord);
+                    return;
                 }
             }
         }
 
-        if (strategy->checkLongEntry(candles) && position->qty == 0 && !position->activeOrder) {
+        if (position->qty == 0 && !position->activeOrder && strategy->checkLongEntry(candles)) {
             if (strategy->getOrderType() == "Market") {
-                placeMarketOrder(Order(strategy->getMaxQty()));
+                placeMarketOrder(Order(strategy->getQty()));
+
+            } else if (strategy->getOrderType() == "Limit" && !orderBook->isEmpty()) {
+                Order ord(orderBook->bidPrice(), strategy->getQty(), strategy->getSlippage());
+                placeLimitOrder(ord);
             }
-        } else if (strategy->checkShortEntry(candles) && position->qty == 0 && !position->activeOrder) {
+            return;
+        } else if (position->qty == 0 && !position->activeOrder && strategy->checkShortEntry(candles)) {
             if (strategy->getOrderType() == "Market") {
-                placeMarketOrder(Order(-strategy->getMaxQty()));
+                placeMarketOrder(Order(-strategy->getQty()));
+
+            } else if (strategy->getOrderType() == "Limit" && !orderBook->isEmpty()) {
+                Order ord(orderBook->askPrice(), -strategy->getQty(), strategy->getSlippage());
+                placeLimitOrder(ord);
             }
+            return;
         }
-        newCandleAdded = false;
+    }
+
+    if (position->activeOrder) {
+        if (position->activeOrder->isBuy() && position->activeOrder->price < orderBook->bidPrice()) {
+            position->activeOrder->price = orderBook->bidPrice();
+            amendLimitOrder(*position->activeOrder);
+
+        } else if (position->activeOrder->isSell() && position->activeOrder->price > orderBook->askPrice()) {
+            position->activeOrder->price = orderBook->askPrice();
+            amendLimitOrder(*position->activeOrder);
+        }
     }
 }
 

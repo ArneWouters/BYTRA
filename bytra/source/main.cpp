@@ -64,7 +64,7 @@ int main(int argc, char **argv) {
         spdlog::set_default_logger(logger);
         spdlog::flush_every(std::chrono::seconds(1));
         spdlog::flush_on(spdlog::level::err);
-        spdlog::set_pattern("[%Y-%m-%d %T] [%L] %v");
+        spdlog::set_pattern("[%Y-%m-%d %T.%f] [%L] %v");
         spdlog::info("Welcome to spdlog!");
 
         if (d) {
@@ -113,12 +113,10 @@ int main(int argc, char **argv) {
 
     std::cout << GREEN << " ✔" << RESET << std::endl;
 
-    // This buffer will hold the incoming message
-    beast::flat_buffer buffer;
-    int websocketHeartbeatTimer = std::time(nullptr);
-
     std::cout << "Connecting..." << std::endl;
     bybit->connect();
+    int websocketHeartbeatTimer = std::time(nullptr);
+    int websocketOrderBookSyncTimer = std::time(nullptr);
 
     // Program Loop
     for (;;) {
@@ -127,14 +125,21 @@ int main(int argc, char **argv) {
             bybit->doAutomatedTrading();
             bybit->removeUnusedCandles();
 
+            int currentTime = std::time(nullptr);
+
             // Send heartbeat packet every 55 seconds to maintain websocket connection
-            if (std::time(nullptr) - websocketHeartbeatTimer > 55) {
-                websocketHeartbeatTimer = std::time(nullptr);
+            if (currentTime - websocketHeartbeatTimer > 55) {
+                websocketHeartbeatTimer = currentTime;
                 bybit->sendWebsocketHeartbeat();
+            }
+
+            if (currentTime - websocketOrderBookSyncTimer > 3600) {
+                websocketOrderBookSyncTimer = currentTime;
+                bybit->syncOrderBook();
             }
         }
         sleep(3);
-        std::cout << "Attempting to (re)connect..." << std::endl;
+        std::cout << "Attempting to reconnect..." << std::endl;
         bybit->connect();
     }
 
