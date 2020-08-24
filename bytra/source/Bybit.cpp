@@ -516,6 +516,9 @@ void Bybit::placeLimitOrder(const Order &ord) {
 
     position->activeOrder = std::make_shared<Order>(ord);
     position->activeOrder->id = (std::string)response["result"]["order_id"];
+    spdlog::debug("Set activeOrder with price={}, interval=({}, {}), reduce={}",
+                  position->activeOrder->price, position->activeOrder->priceInterval.first,
+                  position->activeOrder->priceInterval.second, position->activeOrder->reduce);
 }
 
 void Bybit::amendLimitOrder(const Order &ord) {
@@ -638,30 +641,34 @@ void Bybit::doAutomatedTrading() {
         if (position->activeOrder->isBuy()) {
             double bidPrice = orderBook->bidPrice();
 
-            if (bidPrice >= position->activeOrder->priceInterval.first
-                && bidPrice <= position->activeOrder->priceInterval.second) {
-                position->activeOrder->price = bidPrice;
-                amendLimitOrder(*position->activeOrder);
+            if (bidPrice != position->activeOrder->price) {
+                if (bidPrice >= position->activeOrder->priceInterval.first
+                    && bidPrice <= position->activeOrder->priceInterval.second) {
+                    position->activeOrder->price = bidPrice;
+                    amendLimitOrder(*position->activeOrder);
 
-            } else if (position->activeOrder->reduce) {
-                placeMarketOrder(*position->activeOrder);
+                } else if (position->activeOrder->reduce) {
+                    placeMarketOrder(*position->activeOrder);
 
-            } else {
-                cancelActiveLimitOrder();
+                } else {
+                    cancelActiveLimitOrder();
+                }
             }
         } else {
             double askPrice = orderBook->askPrice();
 
-            if (askPrice >= position->activeOrder->priceInterval.first
-                && askPrice <= position->activeOrder->priceInterval.second) {
-                position->activeOrder->price = askPrice;
-                amendLimitOrder(*position->activeOrder);
+            if (askPrice != position->activeOrder->price) {
+                if (askPrice >= position->activeOrder->priceInterval.first
+                    && askPrice <= position->activeOrder->priceInterval.second) {
+                    position->activeOrder->price = askPrice;
+                    amendLimitOrder(*position->activeOrder);
 
-            } else if (position->activeOrder->reduce) {
-                placeMarketOrder(*position->activeOrder);
+                } else if (position->activeOrder->reduce) {
+                    placeMarketOrder(*position->activeOrder);
 
-            } else {
-                cancelActiveLimitOrder();
+                } else {
+                    cancelActiveLimitOrder();
+                }
             }
         }
     }
