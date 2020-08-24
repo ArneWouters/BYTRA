@@ -452,7 +452,7 @@ void Bybit::placeMarketOrder(const Order &ord) {
     payload.AddPair({"timestamp", expires}, holder);
     payload.AddPair({"sign", HmacEncode(payload.content, apiSecret)}, holder);
 
-    spdlog::debug("[HTTP-POST] " + baseUrl + endpoint + payload.content);
+    spdlog::debug("[HTTP-POST] " + baseUrl + endpoint + " - " + payload.content);
     cpr::Response r = cpr::Post(cpr::Url{baseUrl + endpoint}, payload);
     spdlog::debug("[RESP-" + std::to_string(r.status_code) + "] " + r.text);
 
@@ -495,7 +495,7 @@ void Bybit::placeLimitOrder(const Order &ord) {
     payload.AddPair({"timestamp", expires}, holder);
     payload.AddPair({"sign", HmacEncode(payload.content, apiSecret)}, holder);
 
-    spdlog::debug("[HTTP-POST] " + baseUrl + endpoint + payload.content);
+    spdlog::debug("[HTTP-POST] " + baseUrl + endpoint + " - " + payload.content);
     cpr::Response r = cpr::Post(cpr::Url{baseUrl + endpoint}, payload);
     spdlog::debug("[RESP-" + std::to_string(r.status_code) + "] " + r.text);
 
@@ -533,7 +533,7 @@ void Bybit::amendLimitOrder(const Order &ord) {
     cpr::CurlHolder holder;
     payload.AddPair({"sign", HmacEncode(payload.content, apiSecret)}, holder);
 
-    spdlog::debug("[HTTP-POST] " + baseUrl + endpoint + payload.content);
+    spdlog::debug("[HTTP-POST] " + baseUrl + endpoint + " - " + payload.content);
     cpr::Response r = cpr::Post(cpr::Url{baseUrl + endpoint}, payload);
     spdlog::debug("[RESP-" + std::to_string(r.status_code) + "] " + r.text);
 
@@ -567,7 +567,7 @@ void Bybit::cancelActiveLimitOrder() {
     cpr::CurlHolder holder;
     payload.AddPair({"sign", HmacEncode(payload.content, apiSecret)}, holder);
 
-    spdlog::debug("[HTTP-POST] " + baseUrl + endpoint + payload.content);
+    spdlog::debug("[HTTP-POST] " + baseUrl + endpoint + " - " + payload.content);
     cpr::Response r = cpr::Post(cpr::Url{baseUrl + endpoint}, payload);
     spdlog::debug("[RESP-" + std::to_string(r.status_code) + "] " + r.text);
 

@@ -10,9 +10,9 @@
 struct TimeFrame {
     int ticks;  // 1 tick = 1 minute
     std::string symbol;
-    int amount;
+    long amount;
 
-    TimeFrame(const std::string& symbol, const int& amount) {
+    TimeFrame(const std::string& symbol, const long& amount) {
         this->symbol = symbol;
         this->amount = amount;
 

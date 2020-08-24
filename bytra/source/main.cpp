@@ -22,6 +22,7 @@
 #include "strategies/Ema.h"
 #include "strategies/Rsi.h"
 #include "strategies/Strategy.h"
+#include "strategies/Scalp1.h"
 
 namespace beast = boost::beast;
 
@@ -46,11 +47,11 @@ int main(int argc, char **argv) {
     // CLI setup
     CLI::App app("BYTRA");
     std::string strategy;
-    CLI::Option *opt = app.add_option("-s,--strategy,strategy", strategy, "Name of the strategy")->required();
+    app.add_option("-s,--strategy,strategy", strategy, "Name of the strategy")->required();
     int d{0};
-    CLI::Option *flag = app.add_flag("-d,--debug", d, "Debug flag that enables debug logging");
+    app.add_flag("-d,--debug", d, "Debug flag that enables debug logging");
 
-    CLI11_PARSE(app, argc, argv);
+    CLI11_PARSE(app, argc, argv)
 
     // Register signal and signal handler
     signal(SIGINT, signal_callback_handler);
@@ -97,7 +98,7 @@ int main(int argc, char **argv) {
         throw std::invalid_argument("Invalid strategy: " + strategy);
     }
 
-    std::cout << "Strategy found! " << GREEN << "✔" << RESET << std::endl;
+    std::cout << strategy << " strategy found! " << GREEN << "✔" << RESET << std::endl;
     std::cout << " - Setting up strategy" << std::flush;
 
     std::string baseUrl = *tbl["bybit-testnet"]["baseUrl"].value<std::string>();
