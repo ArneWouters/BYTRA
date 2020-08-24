@@ -22,7 +22,6 @@
 #include "strategies/Ema.h"
 #include "strategies/Rsi.h"
 #include "strategies/Strategy.h"
-#include "strategies/Scalp1.h"
 
 namespace beast = boost::beast;
 
