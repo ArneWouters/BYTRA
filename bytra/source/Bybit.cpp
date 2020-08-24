@@ -470,6 +470,8 @@ void Bybit::placeMarketOrder(const Order &ord) {
         spdlog::error("Bybit::placeMarketOrder - bad response - " + (std::string)response["ret_msg"]);
         throw std::runtime_error("Bad API response.");
     }
+
+    if (ord.reduce) { position->activeOrder = nullptr; }
 }
 
 void Bybit::placeLimitOrder(const Order &ord) {
@@ -550,7 +552,7 @@ void Bybit::amendLimitOrder(const Order &ord) {
 
     int retCode = response["ret_code"].get_int64();
 
-    if (retCode != 0) {
+    if (retCode != 0 && retCode != 30032) {
         spdlog::error("Bybit::amendLimitOrder - bad response - " + (std::string)response["ret_msg"]);
         throw std::runtime_error("Bad API response.");
     }
@@ -584,7 +586,7 @@ void Bybit::cancelActiveLimitOrder() {
 
     int retCode = response["ret_code"].get_int64();
 
-    if (retCode != 0) {
+    if (retCode != 0 && retCode != 30032) {
         spdlog::error("Bybit::cancelLimitOrder - bad response - " + (std::string)response["ret_msg"]);
         throw std::runtime_error("Bad API response.");
     }
