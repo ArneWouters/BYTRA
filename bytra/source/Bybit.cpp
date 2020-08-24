@@ -585,6 +585,8 @@ void Bybit::cancelActiveLimitOrder() {
         spdlog::error("Bybit::cancelLimitOrder - bad response - " + (std::string)response["ret_msg"]);
         throw std::runtime_error("Bad API response.");
     }
+
+    position->activeOrder = nullptr;
 }
 
 void Bybit::doAutomatedTrading() {
@@ -633,13 +635,34 @@ void Bybit::doAutomatedTrading() {
     }
 
     if (position->activeOrder) {
-        if (position->activeOrder->isBuy() && position->activeOrder->price < orderBook->bidPrice()) {
-            position->activeOrder->price = orderBook->bidPrice();
-            amendLimitOrder(*position->activeOrder);
+        if (position->activeOrder->isBuy()) {
+            double bidPrice = orderBook->bidPrice();
 
-        } else if (position->activeOrder->isSell() && position->activeOrder->price > orderBook->askPrice()) {
-            position->activeOrder->price = orderBook->askPrice();
-            amendLimitOrder(*position->activeOrder);
+            if (bidPrice >= position->activeOrder->priceInterval.first
+                && bidPrice <= position->activeOrder->priceInterval.second) {
+                position->activeOrder->price = bidPrice;
+                amendLimitOrder(*position->activeOrder);
+
+            } else if (position->activeOrder->reduce) {
+                placeMarketOrder(*position->activeOrder);
+
+            } else {
+                cancelActiveLimitOrder();
+            }
+        } else {
+            double askPrice = orderBook->askPrice();
+
+            if (askPrice >= position->activeOrder->priceInterval.first
+                && askPrice <= position->activeOrder->priceInterval.second) {
+                position->activeOrder->price = askPrice;
+                amendLimitOrder(*position->activeOrder);
+
+            } else if (position->activeOrder->reduce) {
+                placeMarketOrder(*position->activeOrder);
+
+            } else {
+                cancelActiveLimitOrder();
+            }
         }
     }
 }
