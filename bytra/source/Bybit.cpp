@@ -650,7 +650,8 @@ void Bybit::doAutomatedTrading() {
                     amendLimitOrder(*position->activeOrder);
 
                 } else if (position->activeOrder->reduce) {
-                    placeMarketOrder(*position->activeOrder);
+                    cancelActiveLimitOrder();
+                    placeMarketOrder(Order(-position->qty, true));
 
                 } else {
                     cancelActiveLimitOrder();
@@ -666,7 +667,8 @@ void Bybit::doAutomatedTrading() {
                     amendLimitOrder(*position->activeOrder);
 
                 } else if (position->activeOrder->reduce) {
-                    placeMarketOrder(*position->activeOrder);
+                    cancelActiveLimitOrder();
+                    placeMarketOrder(Order(-position->qty, true));
 
                 } else {
                     cancelActiveLimitOrder();
