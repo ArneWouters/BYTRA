@@ -6,9 +6,6 @@
 #include <spdlog/spdlog.h>
 #include <unistd.h>
 
-#include <boost/beast/core/buffers_to_string.hpp>
-#include <boost/beast/core/flat_buffer.hpp>
-#include <boost/beast/websocket/ssl.hpp>
 #include <chrono>
 #include <cli/CLI11.hpp>
 #include <csignal>
@@ -49,6 +46,8 @@ int main(int argc, char **argv) {
     app.add_option("-s,--strategy,strategy", strategy, "Name of the strategy")->required();
     int d{0};
     app.add_flag("-d,--debug", d, "Debug flag that enables debug logging");
+    int t{0};
+    app.add_flag("-t,--testnet", t, "Testnet flag that makes it use the testnet configuration");
 
     CLI11_PARSE(app, argc, argv)
 
@@ -100,11 +99,13 @@ int main(int argc, char **argv) {
     std::cout << strategy << " strategy found! " << GREEN << "✔" << RESET << std::endl;
     std::cout << " - Setting up strategy" << std::flush;
 
-    std::string baseUrl = *tbl["bybit-testnet"]["baseUrl"].value<std::string>();
-    std::string websocketHost = *tbl["bybit-testnet"]["websocketHost"].value<std::string>();
-    std::string websocketTarget = *tbl["bybit-testnet"]["websocketTarget"].value<std::string>();
-    std::string apiKey = *tbl["bybit-testnet"]["apiKey"].value<std::string>();
-    std::string apiSecret = *tbl["bybit-testnet"]["apiSecret"].value<std::string>();
+    std::string configEntry = t ? "bybit-testnet" : "bybit";
+
+    std::string baseUrl = *tbl[configEntry]["baseUrl"].value<std::string>();
+    std::string websocketHost = *tbl[configEntry]["websocketHost"].value<std::string>();
+    std::string websocketTarget = *tbl[configEntry]["websocketTarget"].value<std::string>();
+    std::string apiKey = *tbl[configEntry]["apiKey"].value<std::string>();
+    std::string apiSecret = *tbl[configEntry]["apiSecret"].value<std::string>();
 
     auto bybit = std::make_shared<Bybit>(baseUrl, apiKey, apiSecret, websocketHost, websocketTarget,
                                          validStrategies[strategy]);

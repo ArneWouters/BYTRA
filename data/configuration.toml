@@ -5,3 +5,11 @@ websocketHost = "stream-testnet.bybit.com"
 websocketTarget = "/realtime"
 apiKey = "insert_api_key"
 apiSecret = "insert_api_secret"
+
+[bybit]
+name = "Bybit"
+baseUrl = "https://api.bybit.com"
+websocketHost = "stream.bybit.com"
+websocketTarget = "/realtime"
+apiKey = "insert_api_key"
+apiSecret = "insert_api_secret"

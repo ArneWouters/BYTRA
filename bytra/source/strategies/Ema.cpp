@@ -20,6 +20,7 @@ Ema::Ema() {
     qty = 100;
     orderType = "Market";
     slippage = 10.0;
+    stopLossPercentage = 0.03;
 }
 
 bool Ema::checkLongEntry(std::map<TimeFrame, std::vector<std::shared_ptr<Candle>>> &candles) {

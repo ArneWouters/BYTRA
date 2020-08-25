@@ -22,6 +22,7 @@ class Strategy {
     std::string symbol;
     std::string orderType;
     double slippage;
+    double stopLossPercentage = 0.03;
 
   public:
     virtual bool checkLongEntry(std::map<TimeFrame, std::vector<std::shared_ptr<Candle>>> &candles) = 0;
@@ -43,6 +44,8 @@ class Strategy {
     [[nodiscard]] long getQty() const { return qty; }
 
     [[nodiscard]] double getSlippage() const { return slippage; }
+
+    [[nodiscard]] double getStopLossPercentage() const { return stopLossPercentage; }
 };
 
 #endif  // MEXTRA_STRATEGY_H

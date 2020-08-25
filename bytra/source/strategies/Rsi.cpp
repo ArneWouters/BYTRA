@@ -22,6 +22,7 @@ Rsi::Rsi() {
     qty = 100;
     orderType = "Limit";
     slippage = 5.0;
+    stopLossPercentage = 0.03;
 }
 
 bool Rsi::checkLongEntry(std::map<TimeFrame, std::vector<std::shared_ptr<Candle>>> &candles) {
