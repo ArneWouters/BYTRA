@@ -38,8 +38,6 @@ int main(int argc, char **argv) {
     std::cout << " / /_/ /  / /  / /  / _, _// ___ |" << std::endl;
     std::cout << "/_____/  /_/  /_/  /_/ |_|/_/  |_|   Made by Arne." << std::endl << std::endl;
 
-    std::cout << "Setting up BYTRA" << std::endl;
-
     // CLI setup
     CLI::App app("BYTRA");
     std::string strategy;
@@ -54,6 +52,7 @@ int main(int argc, char **argv) {
     // Register signal and signal handler
     signal(SIGINT, signal_callback_handler);
 
+    std::cout << "Setting up BYTRA" << std::endl;
     std::cout << " - Logging setup" << std::flush;
 
     // spdlog setup

@@ -58,7 +58,7 @@ Use the following command to build and run the executable target.
 ```bash
 cmake -Hbytra -Bbuild/bytra
 cmake --build build/bytra
-./build/bytra/Bytra
+./build/bytra/Bytra --help
 ```
 
 ### Build and run test suite
