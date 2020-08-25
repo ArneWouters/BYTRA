@@ -259,7 +259,7 @@ void Bybit::readWebsocket() {
 }
 
 void Bybit::parseWebsocketMsg(const std::string &msg) {
-    std::cout << msg << std::endl;
+    //std::cout << msg << std::endl;
 
     dom::parser parser;
     dom::element response = parser.parse(msg);
@@ -697,6 +697,7 @@ void Bybit::doAutomatedTrading() {
                 cancelActiveLimitOrder();
             }
             placeMarketOrder(Order(-position->qty, true));
+            spdlog::info("Stop Loss triggered at {}", position->stopLossPrice);
         }
     }
 }
