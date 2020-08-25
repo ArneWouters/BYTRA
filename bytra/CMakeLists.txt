@@ -5,7 +5,7 @@ cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
 # Note: update this to your new project's name and version
 project(
   Bytra
-  VERSION 1.1.0
+  VERSION 1.2.0
   LANGUAGES CXX
 )
 
