@@ -552,10 +552,12 @@ void Bybit::amendLimitOrder(const Order &ord) {
 
     int retCode = response["ret_code"].get_int64();
 
-    if (retCode != 0 && retCode != 30032) {
+    if (retCode != 0 && retCode != 30032 && retCode != 30037) {
         spdlog::error("Bybit::amendLimitOrder - bad response - " + (std::string)response["ret_msg"]);
         throw std::runtime_error("Bad API response.");
     }
+
+    if (retCode == 30032 || retCode == 30037) { position->activeOrder = nullptr; }
 }
 
 void Bybit::cancelActiveLimitOrder() {
