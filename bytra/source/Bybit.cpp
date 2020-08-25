@@ -130,10 +130,12 @@ void Bybit::getPositionApi() {
         throw std::runtime_error("Bad API response.");
     }
 
-    double entryPrice = std::stod((std::string) response["result"]["entry_price"]);
-    std::string side = (std::string) response["result"]["side"];
+    double entryPrice = std::stod((std::string)response["result"]["entry_price"]);
+    std::string side = (std::string)response["result"]["side"];
     long qty = (long)response["result"]["size"];
-    if (side == "Sell") { qty = -qty; }
+    if (side == "Sell") {
+        qty = -qty;
+    }
 
     position->update(qty, entryPrice);
 }
@@ -285,10 +287,12 @@ void Bybit::parseWebsocketMsg(const std::string &msg) {
 
         if (topic == "position") {
             for (dom::object item : response["data"]) {
-                double entryPrice = std::stod((std::string) item["entry_price"]);
+                double entryPrice = std::stod((std::string)item["entry_price"]);
                 std::string side = (std::string)item["side"];
                 long qty = (long)item["size"];
-                if (side == "Sell") { qty = -qty; }
+                if (side == "Sell") {
+                    qty = -qty;
+                }
 
                 position->update(qty, entryPrice);
             }
@@ -472,7 +476,9 @@ void Bybit::placeMarketOrder(const Order &ord) {
         throw std::runtime_error("Bad API response.");
     }
 
-    if (ord.reduce) { position->activeOrder = nullptr; }
+    if (ord.reduce) {
+        position->activeOrder = nullptr;
+    }
 }
 
 void Bybit::placeLimitOrder(const Order &ord) {
@@ -519,9 +525,9 @@ void Bybit::placeLimitOrder(const Order &ord) {
 
     position->activeOrder = std::make_shared<Order>(ord);
     position->activeOrder->id = (std::string)response["result"]["order_id"];
-    spdlog::debug("Set activeOrder with price={}, interval=({}, {}), reduce={}",
-                  position->activeOrder->price, position->activeOrder->priceInterval.first,
-                  position->activeOrder->priceInterval.second, position->activeOrder->reduce);
+    spdlog::debug("Set activeOrder with price={}, interval=({}, {}), reduce={}", position->activeOrder->price,
+                  position->activeOrder->priceInterval.first, position->activeOrder->priceInterval.second,
+                  position->activeOrder->reduce);
 }
 
 void Bybit::amendLimitOrder(const Order &ord) {
@@ -558,7 +564,9 @@ void Bybit::amendLimitOrder(const Order &ord) {
         throw std::runtime_error("Bad API response.");
     }
 
-    if (retCode == 30032 || retCode == 30037 || retCode == 20001) { position->activeOrder = nullptr; }
+    if (retCode == 30032 || retCode == 30037 || retCode == 20001) {
+        position->activeOrder = nullptr;
+    }
 }
 
 void Bybit::cancelActiveLimitOrder() {
@@ -683,8 +691,11 @@ void Bybit::doAutomatedTrading() {
     // Stop Loss
     if (position->qty != 0) {
         double midPrice = (orderBook->askPrice() + orderBook->bidPrice()) / 2;
-        if ((position->isLong() && midPrice < position->stopLossPrice) || (position->isShort() && midPrice > position->stopLossPrice)) {
-            if (position->activeOrder) { cancelActiveLimitOrder(); }
+        if ((position->isLong() && midPrice < position->stopLossPrice)
+            || (position->isShort() && midPrice > position->stopLossPrice)) {
+            if (position->activeOrder) {
+                cancelActiveLimitOrder();
+            }
             placeMarketOrder(Order(-position->qty, true));
         }
     }

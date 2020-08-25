@@ -28,9 +28,13 @@ class Position {
         qty = newQty;
         entryPrice = newPrice;
 
-        if (qty == 0) { return; }
-        else if (isLong()) { stopLossPrice = entryPrice - entryPrice*stopLossPercentage; }
-        else {stopLossPrice = entryPrice + entryPrice*stopLossPercentage;}
+        if (qty == 0) {
+            return;
+        } else if (isLong()) {
+            stopLossPrice = entryPrice - entryPrice * stopLossPercentage;
+        } else {
+            stopLossPrice = entryPrice + entryPrice * stopLossPercentage;
+        }
     }
 };
 

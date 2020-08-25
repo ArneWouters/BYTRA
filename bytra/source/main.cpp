@@ -88,7 +88,8 @@ int main(int argc, char **argv) {
     }
 
     std::map<std::string, std::shared_ptr<Strategy>> validStrategies
-        = {{"rsi", std::make_shared<Rsi>()}, {"ema", std::make_shared<Ema>()}};
+        = {{"rsi", std::make_shared<Rsi>()},
+           {"ema", std::make_shared<Ema>()}};
 
     if (validStrategies[strategy].get() == nullptr) {
         spdlog::error("Invalid strategy: " + strategy);
