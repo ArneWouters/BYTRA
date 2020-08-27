@@ -112,22 +112,38 @@ int main(int argc, char **argv) {
 
     std::cout << GREEN << " ✔" << RESET << std::endl;
 
+    // The io_context is required for all I/O
+    net::io_context ioc;
+
+    // The SSL context is required, and holds certificates
+    ssl::context ctx{ssl::context::tlsv12_client};
+
     std::cout << "Connecting..." << std::endl;
-    bybit->connect();
+    bybit->connect(ioc, ctx);
     int websocketHeartbeatTimer = std::time(nullptr);
     int websocketOrderBookSyncTimer = std::time(nullptr);
 
     // Program Loop
     for (;;) {
         while (bybit->isConnected()) {
-            bybit->readWebsocket();
+            try {
+                bybit->readWebsocket();
+            } catch (const boost::system::system_error &err) {
+                if (err.code() == boost::asio::error::eof) {
+                    spdlog::error("boost::system::system_error: {}", err.what());
+                    break;
+                }
+
+                throw boost::system::system_error(err);
+            }
+
             bybit->doAutomatedTrading();
             bybit->removeUnusedCandles();
 
             int currentTime = std::time(nullptr);
 
-            // Send heartbeat packet every 55 seconds to maintain websocket connection
-            if (currentTime - websocketHeartbeatTimer > 55) {
+            // Send heartbeat packet every 45 seconds to maintain websocket connection
+            if (currentTime - websocketHeartbeatTimer > 45) {
                 websocketHeartbeatTimer = currentTime;
                 bybit->sendWebsocketHeartbeat();
             }
@@ -140,7 +156,8 @@ int main(int argc, char **argv) {
         }
         sleep(3);
         std::cout << "Attempting to reconnect..." << std::endl;
-        bybit->connect();
+        bybit->disconnect();
+        bybit->connect(ioc, ctx);
     }
 
     return 0;

@@ -171,11 +171,10 @@ void Bybit::cancelAllActiveOrders() {
     }
 }
 
-void Bybit::connect() {
+void Bybit::connect(net::io_context &ioc, ssl::context &ctx) {
     cancelAllActiveOrders();
     getPositionApi();
 
-    const std::string host = websocketHost;
     const std::string port = "443";
     std::string expires
         = std::to_string(::duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count() + 2000);
@@ -194,26 +193,20 @@ void Bybit::connect() {
     msg.pop_back();
     msg.append("]}");
 
-    // The io_context is required for all I/O
-    net::io_context ioc;
-
     // These objects perform our I/O
     tcp::resolver resolver{ioc};
-
-    // The SSL context is required, and holds certificates
-    ssl::context ctx{ssl::context::tlsv12_client};
 
     websocket = std::make_shared<websocket::stream<ssl::stream<tcp::socket>>>(
         websocket::stream<ssl::stream<tcp::socket>>{ioc, ctx});
 
     // Set SNI Hostname (many hosts need this to handshake successfully)
-    if (!SSL_set_tlsext_host_name(websocket->next_layer().native_handle(), host.c_str())) {
+    if (!SSL_set_tlsext_host_name(websocket->next_layer().native_handle(), websocketHost.c_str())) {
         boost::system::error_code ec{static_cast<int>(::ERR_get_error()), boost::asio::error::get_ssl_category()};
         throw boost::system::system_error{ec};
     }
 
     // Look up the domain name
-    auto const results = resolver.resolve(host, port);
+    auto const results = resolver.resolve(websocketHost, port);
 
     // Make the connection on the IP address we get from a lookup
     net::connect(websocket->next_layer().next_layer(), results);
@@ -227,7 +220,7 @@ void Bybit::connect() {
     }));
 
     // Perform the websocket handshake
-    websocket->handshake(host, websocketTarget);
+    websocket->handshake(websocketHost, websocketTarget);
 
     // Send the message
     websocket->write(net::buffer(auth_msg));
@@ -239,6 +232,9 @@ void Bybit::connect() {
         return;
     }
     websocket->close(websocket::close_code::normal);
+    websocket->next_layer().shutdown();
+    websocket->next_layer().next_layer().shutdown(boost::asio::socket_base::shutdown_type::shutdown_both);
+    websocket.reset();
 }
 
 bool Bybit::isConnected() {

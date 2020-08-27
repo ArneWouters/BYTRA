@@ -23,6 +23,7 @@
 namespace beast = boost::beast;          // from <boost/beast.hpp>
 namespace websocket = beast::websocket;  // from <boost/beast/websocket.hpp>
 namespace ssl = boost::asio::ssl;        // from <boost/asio/ssl.hpp>
+namespace net = boost::asio;             // from <boost/asio.hpp>
 using tcp = boost::asio::ip::tcp;        // from <boost/asio/ip/tcp.hpp>
 using namespace simdjson;
 
@@ -52,7 +53,7 @@ class Bybit {
 
     void cancelAllActiveOrders();
 
-    void connect();
+    void connect(net::io_context &ioc, ssl::context &ctx);
 
     [[maybe_unused]] void disconnect();
 
