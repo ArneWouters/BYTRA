@@ -102,7 +102,7 @@ void Bybit::getCandlesApi() {
 
 void Bybit::getPositionApi() {
     std::string expires
-        = std::to_string(duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count() + 5000);
+        = std::to_string(duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count() + 1000);
 
     std::string endpoint = "/v2/private/position/list";
     // pairs have to be in alphabetic order
@@ -142,7 +142,7 @@ void Bybit::getPositionApi() {
 
 void Bybit::cancelAllActiveOrders() {
     std::string expires
-        = std::to_string(duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count() + 5000);
+        = std::to_string(duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count() + 1000);
 
     std::string endpoint = "/v2/private/order/cancelAll";
     // pairs have to be in alphabetic order
@@ -445,7 +445,7 @@ void Bybit::syncOrderBook() {
 
 void Bybit::placeMarketOrder(const Order &ord) {
     std::string expires
-        = std::to_string(duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count() + 5000);
+        = std::to_string(duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count() + 1000);
 
     std::string endpoint = "/v2/private/order/create";
     // pairs have to be in alphabetic order
@@ -490,7 +490,7 @@ void Bybit::placeMarketOrder(const Order &ord) {
 
 void Bybit::placeLimitOrder(const Order &ord) {
     std::string expires
-        = std::to_string(duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count() + 5000);
+        = std::to_string(duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count() + 1000);
 
     std::string endpoint = "/v2/private/order/create";
     // pairs have to be in alphabetic order
@@ -539,7 +539,7 @@ void Bybit::placeLimitOrder(const Order &ord) {
 
 void Bybit::amendLimitOrder(const Order &ord) {
     std::string expires
-        = std::to_string(duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count() + 5000);
+        = std::to_string(duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count() + 1000);
 
     std::string endpoint = "/open-api/order/replace";
     // pairs have to be in alphabetic order
@@ -578,7 +578,7 @@ void Bybit::amendLimitOrder(const Order &ord) {
 
 void Bybit::cancelActiveLimitOrder() {
     std::string expires
-        = std::to_string(duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count() + 5000);
+        = std::to_string(duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count() + 1000);
 
     std::string endpoint = "/v2/private/order/cancel";
     // pairs have to be in alphabetic order
