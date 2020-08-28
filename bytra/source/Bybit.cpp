@@ -102,7 +102,7 @@ void Bybit::getCandlesApi() {
 
 void Bybit::getPositionApi() {
     std::string expires
-        = std::to_string(duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count() + 1000);
+        = std::to_string(duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count() + 5000);
 
     std::string endpoint = "/v2/private/position/list";
     // pairs have to be in alphabetic order
@@ -142,7 +142,7 @@ void Bybit::getPositionApi() {
 
 void Bybit::cancelAllActiveOrders() {
     std::string expires
-        = std::to_string(duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count() + 1000);
+        = std::to_string(duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count() + 5000);
 
     std::string endpoint = "/v2/private/order/cancelAll";
     // pairs have to be in alphabetic order
@@ -177,7 +177,7 @@ void Bybit::connect(net::io_context &ioc, ssl::context &ctx) {
 
     const std::string port = "443";
     std::string expires
-        = std::to_string(::duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count() + 2000);
+        = std::to_string(::duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count() + 5000);
 
     std::string auth_msg = R"({"op":"auth","args":[")" + apiKey + R"(",")" + expires + R"(",")"
                            + HmacEncode("GET/realtime" + expires, apiSecret) + R"("]})";
@@ -264,7 +264,15 @@ void Bybit::parseWebsocketMsg(const std::string &msg) {
     // authentication and subscribe messages
     auto error = response["success"].get(elem);
     if (!error) {
+        bool success = (bool) response["success"];
+
+        if(!success) {
+            spdlog::error("Websocket: {}", (std::string) response["ret_msg"]);
+            return;
+        }
+
         std::string op = (std::string)response["request"]["op"];
+
         if (op == "auth") {
             std::cout << "Connected and authenticated with Bybit websocket " << GREEN << "✔" << RESET << std::endl;
             spdlog::info("[WebSocket] Connected to the Bybit Realtime API.");
@@ -353,6 +361,7 @@ void Bybit::parseWebsocketMsg(const std::string &msg) {
                     if (tf.symbol == interval && vec.back()->timestamp != candle->timestamp) {
                         vec.push_back(candle);
                         newCandleAdded = true;
+                        spdlog::debug("Added Candle");
                         break;
                     }
                 }
@@ -414,6 +423,8 @@ void Bybit::parseWebsocketMsg(const std::string &msg) {
                 }
             }
         }
+    } else {
+        spdlog::debug("websocket msg: {}", msg);
     }
 }
 
@@ -434,7 +445,7 @@ void Bybit::syncOrderBook() {
 
 void Bybit::placeMarketOrder(const Order &ord) {
     std::string expires
-        = std::to_string(duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count() + 1000);
+        = std::to_string(duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count() + 5000);
 
     std::string endpoint = "/v2/private/order/create";
     // pairs have to be in alphabetic order
@@ -479,7 +490,7 @@ void Bybit::placeMarketOrder(const Order &ord) {
 
 void Bybit::placeLimitOrder(const Order &ord) {
     std::string expires
-        = std::to_string(duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count() + 1000);
+        = std::to_string(duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count() + 5000);
 
     std::string endpoint = "/v2/private/order/create";
     // pairs have to be in alphabetic order
@@ -528,7 +539,7 @@ void Bybit::placeLimitOrder(const Order &ord) {
 
 void Bybit::amendLimitOrder(const Order &ord) {
     std::string expires
-        = std::to_string(duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count() + 1000);
+        = std::to_string(duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count() + 5000);
 
     std::string endpoint = "/open-api/order/replace";
     // pairs have to be in alphabetic order
@@ -567,7 +578,7 @@ void Bybit::amendLimitOrder(const Order &ord) {
 
 void Bybit::cancelActiveLimitOrder() {
     std::string expires
-        = std::to_string(duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count() + 1000);
+        = std::to_string(duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count() + 5000);
 
     std::string endpoint = "/v2/private/order/cancel";
     // pairs have to be in alphabetic order
