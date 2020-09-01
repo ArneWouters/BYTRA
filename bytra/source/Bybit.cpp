@@ -262,8 +262,7 @@ void Bybit::parseWebsocketMsg(const std::string &msg) {
     dom::element elem;
 
     // authentication and subscribe messages
-    auto error = response["success"].get(elem);
-    if (!error) {
+    if (auto error = response["success"].get(elem); !error) {
         bool success = (bool) response["success"];
 
         if(!success) {
@@ -285,8 +284,7 @@ void Bybit::parseWebsocketMsg(const std::string &msg) {
         return;
     }
 
-    error = response["topic"].get(elem);
-    if (!error) {
+    if (auto error = response["topic"].get(elem); !error) {
         std::string topic = (std::string)response["topic"];
 
         if (topic == "position") {
@@ -308,7 +306,7 @@ void Bybit::parseWebsocketMsg(const std::string &msg) {
                 double askPrice = orderBook->askPrice();
                 double bidPrice = orderBook->bidPrice();
 
-                if (orderStatus == "Cancelled" && position->activeOrder != nullptr) {
+                if (orderStatus == "Cancelled" && position->activeOrder) {
                     if (position->activeOrder->isBuy()) {
                         if (bidPrice >= position->activeOrder->priceInterval.first
                             && bidPrice <= position->activeOrder->priceInterval.second) {

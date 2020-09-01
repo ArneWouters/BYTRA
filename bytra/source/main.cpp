@@ -91,7 +91,7 @@ int main(int argc, char **argv) {
         = {{"rsi", std::make_shared<Rsi>()},
            {"ema", std::make_shared<Ema>()}};
 
-    if (validStrategies[strategy].get() == nullptr) {
+    if (!validStrategies[strategy].get()) {
         spdlog::error("Invalid strategy: " + strategy);
         throw std::invalid_argument("Invalid strategy: " + strategy);
     }

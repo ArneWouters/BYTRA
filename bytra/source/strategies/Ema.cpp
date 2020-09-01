@@ -27,14 +27,10 @@ bool Ema::checkLongEntry(std::map<TimeFrame, std::vector<std::shared_ptr<Candle>
     auto tf = TimeFrame(timeframes[0].first, timeframes[0].second);
 
     // calculate 20-EMA values
-    auto val = calculateEMA(candles[tf], 20);
-    double currEmaValue = val.first;
-    double prevEmaValue = val.second;
+    auto [currEmaValue, prevEmaValue] = calculateEMA(candles[tf], 20);
 
     // calculate 50-EMA values
-    val = calculateEMA(candles[tf], 50);
-    double currEmaValue2 = val.first;
-    double prevEmaValue2 = val.second;
+    auto [currEmaValue2, prevEmaValue2] = calculateEMA(candles[tf], 50);
 
     // check if 20-EMA crossed above 50-EMA
     if (prevEmaValue < prevEmaValue2 && currEmaValue > currEmaValue2) {
@@ -49,14 +45,10 @@ bool Ema::checkShortEntry(std::map<TimeFrame, std::vector<std::shared_ptr<Candle
     auto tf = TimeFrame(timeframes[0].first, timeframes[0].second);
 
     // calculate 20-EMA values
-    auto val = calculateEMA(candles[tf], 20);
-    double currEmaValue = val.first;
-    double prevEmaValue = val.second;
+    auto [currEmaValue, prevEmaValue] = calculateEMA(candles[tf], 20);
 
     // calculate 50-EMA values
-    val = calculateEMA(candles[tf], 50);
-    double currEmaValue2 = val.first;
-    double prevEmaValue2 = val.second;
+    auto [currEmaValue2, prevEmaValue2] = calculateEMA(candles[tf], 50);
 
     // check if 20-EMA crossed below 50-EMA
     if (prevEmaValue > prevEmaValue2 && currEmaValue < currEmaValue2) {
