@@ -35,19 +35,19 @@ CPMAddPackage(
 CPMAddPackage(
   NAME spdlog
   GITHUB_REPOSITORY gabime/spdlog
-  VERSION 1.8.0
+  VERSION 1.8.1
 )
 
 CPMAddPackage(
   NAME simdjson
   GITHUB_REPOSITORY simdjson/simdjson
-  VERSION 0.4.7
+  VERSION 0.6.0
 )
 
 CPMAddPackage(
   NAME cpr
   GITHUB_REPOSITORY whoshuu/cpr
-  VERSION 1.5.1
+  GIT_TAG 1.5.2
   OPTIONS "BUILD_CPR_TESTS OFF"
 )
 

@@ -28,7 +28,7 @@
 
 cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
 
-set(CURRENT_CPM_VERSION 0.27.2)
+set(CURRENT_CPM_VERSION 0.27.5)
 
 if(CPM_DIRECTORY)
   if(NOT CPM_DIRECTORY STREQUAL CMAKE_CURRENT_LIST_DIR)
@@ -119,6 +119,7 @@ function(CPMFindPackage)
   set(oneValueArgs
     NAME
     VERSION
+    GIT_TAG
     FIND_PACKAGE_ARGUMENTS
   )
 
@@ -252,6 +253,7 @@ function(CPMAddPackage)
       NAME ${CPM_ARGS_NAME}
       SOURCE_DIR ${PACKAGE_SOURCE}
       FORCE True
+      OPTIONS ${CPM_ARGS_OPTIONS}
     )
     cpm_export_variables(${CPM_ARGS_NAME})
     return()
