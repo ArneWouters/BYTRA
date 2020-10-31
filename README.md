@@ -60,6 +60,9 @@ Use the following command to build and run the executable target.
 cmake -Hbytra -Bbuild/bytra
 cmake --build build/bytra
 ./build/bytra/Bytra --help
+
+# Example for running EMA strategy on the testnet with debug on.
+./build/bytra/Bytra -s ema -d -t
 ```
 
 ### Build and run test suite
