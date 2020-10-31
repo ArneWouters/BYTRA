@@ -18,7 +18,8 @@ class Ema : public Strategy {
     bool checkExit(std::map<TimeFrame, std::vector<std::shared_ptr<Candle>>> &candles,
                    std::shared_ptr<Position> position) override;
 
-    std::pair<double, double> calculateEMA(std::vector<std::shared_ptr<Candle>> &candles, const int &timePeriod);
+    std::pair<double, double> calculateEMA(std::map<TimeFrame, std::vector<std::shared_ptr<Candle>>> &candles,
+                                           const int &timePeriod);
 };
 
 #endif  // BYTRA_EMA_H

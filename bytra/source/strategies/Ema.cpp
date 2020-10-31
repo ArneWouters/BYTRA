@@ -24,56 +24,40 @@ Ema::Ema() {
 }
 
 bool Ema::checkLongEntry(std::map<TimeFrame, std::vector<std::shared_ptr<Candle>>> &candles) {
-    auto tf = TimeFrame(timeframes[0].first, timeframes[0].second);
-
     // calculate 20-EMA values
-    auto [currEmaValue, prevEmaValue] = calculateEMA(candles[tf], 20);
+    auto [currEmaValue, prevEmaValue] = calculateEMA(candles, 20);
 
     // calculate 50-EMA values
-    auto [currEmaValue2, prevEmaValue2] = calculateEMA(candles[tf], 50);
+    auto [currEmaValue2, prevEmaValue2] = calculateEMA(candles, 50);
 
     // check if 20-EMA crossed above 50-EMA
-    if (prevEmaValue < prevEmaValue2 && currEmaValue > currEmaValue2) {
-        spdlog::debug("Entry Long {}", name);
-        return true;
-    }
-
-    return false;
+    return (prevEmaValue < prevEmaValue2 && currEmaValue > currEmaValue2);
 }
 
 bool Ema::checkShortEntry(std::map<TimeFrame, std::vector<std::shared_ptr<Candle>>> &candles) {
-    auto tf = TimeFrame(timeframes[0].first, timeframes[0].second);
-
     // calculate 20-EMA values
-    auto [currEmaValue, prevEmaValue] = calculateEMA(candles[tf], 20);
+    auto [currEmaValue, prevEmaValue] = calculateEMA(candles, 20);
 
     // calculate 50-EMA values
-    auto [currEmaValue2, prevEmaValue2] = calculateEMA(candles[tf], 50);
+    auto [currEmaValue2, prevEmaValue2] = calculateEMA(candles, 50);
 
     // check if 20-EMA crossed below 50-EMA
-    if (prevEmaValue > prevEmaValue2 && currEmaValue < currEmaValue2) {
-        spdlog::debug("Entry Short {}", name);
-        return true;
-    }
-
-    return false;
+    return (prevEmaValue > prevEmaValue2 && currEmaValue < currEmaValue2);
 }
 
 bool Ema::checkExit(std::map<TimeFrame, std::vector<std::shared_ptr<Candle>>> &candles,
                     std::shared_ptr<Position> position) {
-    if ((position->isLong() && checkShortEntry(candles)) || (position->isShort() && checkLongEntry(candles))) {
-        spdlog::debug("Exit {}", name);
-        return true;
-    }
-
-    return false;
+    return ((position->isLong() && checkShortEntry(candles)) || (position->isShort() && checkLongEntry(candles)));
 }
 
-std::pair<double, double> Ema::calculateEMA(std::vector<std::shared_ptr<Candle>> &candles, const int &timePeriod) {
-    std::vector<double> close;
-    close.reserve(candles.size());
+std::pair<double, double> Ema::calculateEMA(std::map<TimeFrame, std::vector<std::shared_ptr<Candle>>> &candles,
+                                            const int &timePeriod) {
+    auto tf = TimeFrame(timeframes[0].first, timeframes[0].second);
 
-    for (auto &candle : candles) {
+    std::vector<double> close;
+    close.reserve(candles[tf].size());
+
+    for (auto &candle : candles[tf]) {
         close.push_back(candle->close);
     }
 
@@ -85,8 +69,14 @@ std::pair<double, double> Ema::calculateEMA(std::vector<std::shared_ptr<Candle>>
 
     TA_RetCode retCode = TA_EMA(startIdx, endIdx, close.data(), timePeriod, &outBegIdx, &outNbElement, ema.data());
 
+    if (retCode != 0) {
+        throw std::runtime_error("Bad TA_RetCode from TA_EMA.");
+    }
+
     double currEmaValue = ema[outNbElement - 1];
     double prevEmaValue = ema[outNbElement - 2];
+
+    spdlog::debug("Calculated ema({}): {}", timePeriod, currEmaValue);
 
     return {currEmaValue, prevEmaValue};
 }
