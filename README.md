@@ -1,6 +1,7 @@
 # BYTRA
 
 [![Build Status](https://travis-ci.com/ArneWouters/BYTRA.svg?token=whAYzQpaYXnwwohSyHG7&branch=master)](https://travis-ci.com/ArneWouters/BYTRA)
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/0fbd7c39a3aa48859870b476a91c28a4)](https://www.codacy.com/gh/ArneWouters/BYTRA/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=ArneWouters/BYTRA&amp;utm_campaign=Badge_Grade)
 [![GitHub](https://img.shields.io/github/license/ArneWouters/BYTRA?color=blue)](https://github.com/ArneWouters/BYTRA/blob/master/LICENSE)
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/ArneWouters/BYTRA)](https://github.com/ArneWouters/BYTRA/releases/latest)
 
