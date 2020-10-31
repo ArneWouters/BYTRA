@@ -14,10 +14,10 @@
 ### Prerequisites
 
 These have to be installed on the current system:
- *   zlib1g-dev
- *   libssl-dev
- *   TA-Lib
- *   Boost
+*   zlib1g-dev
+*   libssl-dev
+*   TA-Lib
+*   Boost
 
 Installing zlib1g-dev and libssl-dev:
 
