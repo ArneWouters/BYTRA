@@ -26,47 +26,26 @@ Rsi::Rsi() {
 }
 
 bool Rsi::checkLongEntry(std::map<TimeFrame, std::vector<std::shared_ptr<Candle>>> &candles) {
-    auto tf = TimeFrame(timeframes[0].first, timeframes[0].second);
-    double rsi_value = calculateRSI(candles[tf]);
-
-    if (rsi_value < 30) {
-        spdlog::debug("Entry Long rsi={}", rsi_value);
-        return true;
-    }
-
-    return false;
+     return calculateRSI(candles) < 30;
 }
 
 bool Rsi::checkShortEntry(std::map<TimeFrame, std::vector<std::shared_ptr<Candle>>> &candles) {
-    auto tf = TimeFrame(timeframes[0].first, timeframes[0].second);
-    double rsi_value = calculateRSI(candles[tf]);
-
-    if (rsi_value > 70) {
-        spdlog::debug("Entry Short rsi={}", rsi_value);
-        return true;
-    }
-
-    return false;
+     return calculateRSI(candles) > 70;
 }
 
 bool Rsi::checkExit(std::map<TimeFrame, std::vector<std::shared_ptr<Candle>>> &candles,
                     std::shared_ptr<Position> position) {
-    auto tf = TimeFrame(timeframes[0].first, timeframes[0].second);
-    double rsi_value = calculateRSI(candles[tf]);
-
-    if ((rsi_value > 50 && position->isLong()) || (rsi_value < 50 && position->isShort())) {
-        spdlog::debug("Exit rsi={}", rsi_value);
-        return true;
-    }
-
-    return false;
+    double rsi_value = calculateRSI(candles);
+    return (rsi_value > 50 && position->isLong()) || (rsi_value < 50 && position->isShort());
 }
 
-double Rsi::calculateRSI(std::vector<std::shared_ptr<Candle>> &candles) {
-    std::vector<double> close;
-    close.reserve(candles.size());
+double Rsi::calculateRSI(std::map<TimeFrame, std::vector<std::shared_ptr<Candle>>> &candles) {
+    auto tf = TimeFrame(timeframes[0].first, timeframes[0].second);
 
-    for (auto &candle : candles) {
+    std::vector<double> close;
+    close.reserve(candles[tf].size());
+
+    for (auto &candle : candles[tf]) {
         close.push_back(candle->close);
     }
 
@@ -79,7 +58,13 @@ double Rsi::calculateRSI(std::vector<std::shared_ptr<Candle>> &candles) {
 
     TA_RetCode retCode = TA_RSI(startIdx, endIdx, close.data(), rsi_length, &outBegIdx, &outNbElement, rsi.data());
 
+    if (retCode != 0) {
+        throw std::runtime_error("Bad TA_RetCode from TA_RSI.");
+    }
+
     double rsi_value = rsi[outNbElement - 1];
+
+    spdlog::debug("Calculated rsi: {}", rsi_value);
 
     return rsi_value;
 }

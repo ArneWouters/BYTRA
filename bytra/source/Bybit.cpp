@@ -618,6 +618,8 @@ void Bybit::doAutomatedTrading() {
             auto exit = strategy->checkExit(candles, position);
 
             if (exit) {
+                spdlog::debug("Exit signal");
+
                 if (position->activeOrder && !position->activeOrder->reduce) {
                     cancelActiveLimitOrder();
                 }
@@ -635,6 +637,8 @@ void Bybit::doAutomatedTrading() {
         }
 
         if (position->qty == 0 && !position->activeOrder && strategy->checkLongEntry(candles)) {
+            spdlog::debug("Entry signal: Long");
+
             if (strategy->getOrderType() == "Market") {
                 placeMarketOrder(Order(strategy->getQty()));
 
@@ -642,8 +646,11 @@ void Bybit::doAutomatedTrading() {
                 Order ord(orderBook->bidPrice(), strategy->getQty(), strategy->getSlippage());
                 placeLimitOrder(ord);
             }
+
             return;
         } else if (position->qty == 0 && !position->activeOrder && strategy->checkShortEntry(candles)) {
+            spdlog::debug("Entry signal: Short");
+
             if (strategy->getOrderType() == "Market") {
                 placeMarketOrder(Order(-strategy->getQty()));
 
