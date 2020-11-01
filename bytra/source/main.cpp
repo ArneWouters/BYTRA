@@ -22,6 +22,19 @@
 
 namespace beast = boost::beast;
 
+void checkEnvVar(std::string &var) {
+    if (var.size() > 3 && var.substr(0, 2) == "${" && var[var.size()-1] == '}') {
+        if (auto env_var = std::getenv(var.substr(2, var.size()-3).c_str()); env_var) {
+            var = env_var;
+            return;
+        }
+
+        std::cerr << "Undefined environment variable in configuration: " << var << std::endl;
+        spdlog::error("Undefined environment variable in configuration: {}", var);
+        exit(1);
+    }
+}
+
 void signal_callback_handler(int signum) {
     std::cout << std::endl;
     std::cout << "...Terminating" << std::endl;
@@ -106,6 +119,10 @@ int main(int argc, char **argv) {
     std::string websocketTarget = *tbl[configEntry]["websocketTarget"].value<std::string>();
     std::string apiKey = *tbl[configEntry]["apiKey"].value<std::string>();
     std::string apiSecret = *tbl[configEntry]["apiSecret"].value<std::string>();
+
+    // Check if apiKey and apiSecret are env variables
+    checkEnvVar(apiKey);
+    checkEnvVar(apiSecret);
 
     auto bybit = std::make_shared<Bybit>(baseUrl, apiKey, apiSecret, websocketHost, websocketTarget,
                                          validStrategies[strategy]);
