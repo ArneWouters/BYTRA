@@ -45,14 +45,39 @@ Bybit::Bybit(std::string &baseUrl, std::string &apiKey, std::string &apiSecret, 
         }
         candles[TimeFrame(tf.first, tf.second)] = {};
     }
-    getCandlesApi();
+
+    loadCandles();
 
     position = std::make_shared<Position>();
     position->stopLossPercentage = strategy->getStopLossPercentage();
     orderBook = std::make_shared<OrderBook>();
 }
 
-void Bybit::getCandlesApi() {
+cpr::Response Bybit::ApiGet(const cpr::Parameters &parameters, const std::string &endpoint) {
+    spdlog::debug("[HTTP-GET] " + baseUrl + endpoint + " - " + parameters.content);
+    cpr::Response r = cpr::Get(cpr::Url{baseUrl + endpoint}, parameters);
+    spdlog::debug("[RESP-" + std::to_string(r.status_code) + "]");
+
+    if (r.status_code != 200) {
+        throw std::runtime_error("Bad API response.");
+    }
+
+    return r;
+}
+
+cpr::Response Bybit::ApiPost(const cpr::Payload &payload, const std::string &endpoint) {
+    spdlog::debug("[HTTP-POST] " + baseUrl + endpoint + " - " + payload.content);
+    cpr::Response r = cpr::Post(cpr::Url{baseUrl + endpoint}, payload);
+    spdlog::debug("[RESP-" + std::to_string(r.status_code) + "] " + r.text);
+
+    if (r.status_code != 200) {
+        throw std::runtime_error("Bad API response.");
+    }
+
+    return r;
+}
+
+void Bybit::loadCandles() {
     for (auto &[tf, vec] : candles) {
         long currentTime = duration_cast<seconds>(system_clock::now().time_since_epoch()).count();
         long from = currentTime - (tf.ticks * (tf.amount + 1) * 60);
@@ -62,23 +87,12 @@ void Bybit::getCandlesApi() {
         int batches = std::ceil(float(tf.amount + 1) / float(batch_size));
 
         std::string endpoint = "/v2/public/kline/list";
-        cpr::Session session;
-        session.SetUrl(cpr::Url{baseUrl + endpoint});
 
         for (int i = 0; i < batches; i++) {
             auto parameters = cpr::Parameters{
                 {"symbol", strategy->getSymbol()}, {"interval", tf.symbol}, {"from", std::to_string(from)}};
-            session.SetParameters(parameters);
 
-            spdlog::debug("[HTTP-GET] " + baseUrl + endpoint + " - " + parameters.content);
-            cpr::Response r = session.Get();
-            spdlog::debug("[RESP-" + std::to_string(r.status_code) + "]");
-
-            if (r.status_code != 200) {
-                spdlog::error("Bybit::getCandlesApi - bad response - " + r.text);
-                throw std::runtime_error("Bad API response.");
-            }
-
+            cpr::Response r = ApiGet(parameters, endpoint);
             dom::parser parser;
             dom::element response = parser.parse(r.text);
 
@@ -100,7 +114,7 @@ void Bybit::getCandlesApi() {
     }
 }
 
-void Bybit::getPositionApi() {
+void Bybit::loadPosition() {
     std::string expires
         = std::to_string(duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count() + 1000);
 
@@ -111,15 +125,7 @@ void Bybit::getPositionApi() {
     cpr::CurlHolder holder;
     parameters.AddParameter({"sign", HmacEncode(parameters.content, apiSecret)}, holder);
 
-    spdlog::debug("[HTTP-GET] " + baseUrl + endpoint + " - " + parameters.content);
-    cpr::Response r = cpr::Get(cpr::Url{baseUrl + endpoint}, parameters);
-    spdlog::debug("[RESP-" + std::to_string(r.status_code) + "] " + r.text);
-
-    if (r.status_code != 200) {
-        spdlog::error("Bybit::getPositionApi - bad response - " + r.text);
-        throw std::runtime_error("Bad API response.");
-    }
-
+    cpr::Response r = ApiGet(parameters, endpoint);
     dom::parser parser;
     dom::element response = parser.parse(r.text);
 
@@ -151,15 +157,7 @@ void Bybit::cancelAllActiveOrders() {
     cpr::CurlHolder holder;
     payload.AddPair({"sign", HmacEncode(payload.content, apiSecret)}, holder);
 
-    spdlog::debug("[HTTP-POST] " + baseUrl + endpoint + " - " + payload.content);
-    cpr::Response r = cpr::Post(cpr::Url{baseUrl + endpoint}, payload);
-    spdlog::debug("[RESP-" + std::to_string(r.status_code) + "] " + r.text);
-
-    if (r.status_code != 200) {
-        spdlog::error("Bybit::cancelAllActiveOrders - bad response - " + r.text);
-        throw std::runtime_error("Bad API response.");
-    }
-
+    cpr::Response r = ApiPost(payload, endpoint);
     dom::parser parser;
     dom::element response = parser.parse(r.text);
 
@@ -173,7 +171,7 @@ void Bybit::cancelAllActiveOrders() {
 
 void Bybit::connect(net::io_context &ioc, ssl::context &ctx) {
     cancelAllActiveOrders();
-    getPositionApi();
+    loadPosition();
 
     const std::string port = "443";
     std::string expires
@@ -462,15 +460,7 @@ void Bybit::placeMarketOrder(const Order &ord) {
     payload.AddPair({"timestamp", expires}, holder);
     payload.AddPair({"sign", HmacEncode(payload.content, apiSecret)}, holder);
 
-    spdlog::debug("[HTTP-POST] " + baseUrl + endpoint + " - " + payload.content);
-    cpr::Response r = cpr::Post(cpr::Url{baseUrl + endpoint}, payload);
-    spdlog::debug("[RESP-" + std::to_string(r.status_code) + "] " + r.text);
-
-    if (r.status_code != 200) {
-        spdlog::error("Bybit::placeMarketOrder - bad response - " + r.text);
-        throw std::runtime_error("Bad API response.");
-    }
-
+    cpr::Response r = ApiPost(payload, endpoint);
     dom::parser parser;
     dom::element response = parser.parse(r.text);
 
@@ -509,15 +499,7 @@ void Bybit::placeLimitOrder(const Order &ord) {
     payload.AddPair({"timestamp", expires}, holder);
     payload.AddPair({"sign", HmacEncode(payload.content, apiSecret)}, holder);
 
-    spdlog::debug("[HTTP-POST] " + baseUrl + endpoint + " - " + payload.content);
-    cpr::Response r = cpr::Post(cpr::Url{baseUrl + endpoint}, payload);
-    spdlog::debug("[RESP-" + std::to_string(r.status_code) + "] " + r.text);
-
-    if (r.status_code != 200) {
-        spdlog::error("Bybit::placeLimitOrder - bad response - " + r.text);
-        throw std::runtime_error("Bad API response.");
-    }
-
+    cpr::Response r = ApiPost(payload, endpoint);
     dom::parser parser;
     dom::element response = parser.parse(r.text);
 
@@ -550,15 +532,7 @@ void Bybit::amendLimitOrder(const Order &ord) {
     cpr::CurlHolder holder;
     payload.AddPair({"sign", HmacEncode(payload.content, apiSecret)}, holder);
 
-    spdlog::debug("[HTTP-POST] " + baseUrl + endpoint + " - " + payload.content);
-    cpr::Response r = cpr::Post(cpr::Url{baseUrl + endpoint}, payload);
-    spdlog::debug("[RESP-" + std::to_string(r.status_code) + "] " + r.text);
-
-    if (r.status_code != 200) {
-        spdlog::error("Bybit::amendLimitOrder - bad response - " + r.text);
-        throw std::runtime_error("Bad API response.");
-    }
-
+    cpr::Response r = ApiPost(payload, endpoint);
     dom::parser parser;
     dom::element response = parser.parse(r.text);
 
@@ -588,15 +562,7 @@ void Bybit::cancelActiveLimitOrder() {
     cpr::CurlHolder holder;
     payload.AddPair({"sign", HmacEncode(payload.content, apiSecret)}, holder);
 
-    spdlog::debug("[HTTP-POST] " + baseUrl + endpoint + " - " + payload.content);
-    cpr::Response r = cpr::Post(cpr::Url{baseUrl + endpoint}, payload);
-    spdlog::debug("[RESP-" + std::to_string(r.status_code) + "] " + r.text);
-
-    if (r.status_code != 200) {
-        spdlog::error("Bybit::cancelLimitOrder - bad response - " + r.text);
-        throw std::runtime_error("Bad API response.");
-    }
-
+    cpr::Response r = ApiPost(payload, endpoint);
     dom::parser parser;
     dom::element response = parser.parse(r.text);
 
