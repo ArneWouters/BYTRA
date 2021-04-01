@@ -44,15 +44,9 @@ CPMAddPackage(
   VERSION 0.6.0
 )
 
-CPMAddPackage(
-  NAME cpr
-  GITHUB_REPOSITORY whoshuu/cpr
-  GIT_TAG 1.5.2
-  OPTIONS "BUILD_CPR_TESTS OFF"
-)
-
 find_package(ta_lib)
 find_package(Boost REQUIRED)
+find_package(OpenSSL REQUIRED)
 
 # ---- Add source and header files ----
 
@@ -65,14 +59,14 @@ add_executable(Bytra ${sources} ${headers})
 
 set_target_properties(Bytra PROPERTIES CXX_STANDARD 17)
 target_include_directories(
-  Bytra PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../include" "${Boost_INCLUDE_DIR}"
+  Bytra PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../include" "${Boost_INCLUDE_DIR}" "${OPENSSL_INCLUDE_DIRS}"
 )
 target_link_libraries(
   Bytra
   cxxopts
   spdlog
   simdjson
-  cpr
   ta_lib
   ${Boost_LIBRARIES}
+  ${OPENSSL_LIBRARIES}
 )

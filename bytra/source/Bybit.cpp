@@ -4,7 +4,6 @@
 
 #include "Bybit.h"
 
-#include <cpr/cpr.h>
 #include <simdjson/simdjson.h>
 #include <spdlog/spdlog.h>
 
@@ -17,6 +16,7 @@
 
 #include "Encryption.h"
 #include "TerminalColors.h"
+#include "http/RESTClient.hpp"
 
 namespace beast = boost::beast;          // from <boost/beast.hpp>
 namespace http = beast::http;            // from <boost/beast/http.hpp>
@@ -53,30 +53,6 @@ Bybit::Bybit(std::string &baseUrl, std::string &apiKey, std::string &apiSecret, 
     orderBook = std::make_shared<OrderBook>();
 }
 
-cpr::Response Bybit::ApiGet(const cpr::Parameters &parameters, const std::string &endpoint) {
-    spdlog::debug("[HTTP-GET] " + baseUrl + endpoint + " - " + parameters.content);
-    cpr::Response r = cpr::Get(cpr::Url{baseUrl + endpoint}, parameters);
-    spdlog::debug("[RESP-" + std::to_string(r.status_code) + "]");
-
-    if (r.status_code != 200) {
-        throw std::runtime_error("Bad API response.");
-    }
-
-    return r;
-}
-
-cpr::Response Bybit::ApiPost(const cpr::Payload &payload, const std::string &endpoint) {
-    spdlog::debug("[HTTP-POST] " + baseUrl + endpoint + " - " + payload.content);
-    cpr::Response r = cpr::Post(cpr::Url{baseUrl + endpoint}, payload);
-    spdlog::debug("[RESP-" + std::to_string(r.status_code) + "] " + r.text);
-
-    if (r.status_code != 200) {
-        throw std::runtime_error("Bad API response.");
-    }
-
-    return r;
-}
-
 void Bybit::loadCandles() {
     for (auto &[tf, vec] : candles) {
         long currentTime = duration_cast<seconds>(system_clock::now().time_since_epoch()).count();
@@ -89,12 +65,12 @@ void Bybit::loadCandles() {
         std::string endpoint = "/v2/public/kline/list";
 
         for (int i = 0; i < batches; i++) {
-            auto parameters = cpr::Parameters{
-                {"symbol", strategy->getSymbol()}, {"interval", tf.symbol}, {"from", std::to_string(from)}};
-
-            cpr::Response r = ApiGet(parameters, endpoint);
+            auto parameters = RESTClient::Parameters{
+                {"symbol", strategy->getSymbol()}, {"interval", tf.symbol},
+                {"from", std::to_string(from)}};
+            auto response_json = RESTClient::Get(baseUrl, endpoint, parameters);
             dom::parser parser;
-            dom::element response = parser.parse(r.text);
+            dom::element response = parser.parse(response_json);
 
             for (dom::object item : response["result"]) {
                 double open = std::stod((std::string)item["open"]);
@@ -117,17 +93,14 @@ void Bybit::loadCandles() {
 void Bybit::loadPosition() {
     std::string expires
         = std::to_string(duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count() + 1000);
-
     std::string endpoint = "/v2/private/position/list";
     // pairs have to be in alphabetic order
-    auto parameters = cpr::Parameters{{"api_key", apiKey}, {"symbol", strategy->getSymbol()}, {"timestamp", expires}};
-
-    cpr::CurlHolder holder;
-    parameters.AddParameter({"sign", HmacEncode(parameters.content, apiSecret)}, holder);
-
-    cpr::Response r = ApiGet(parameters, endpoint);
+    auto parameters = RESTClient::Parameters{
+        {"api_key", apiKey}, {"symbol", strategy->getSymbol()}, {"timestamp", expires}};
+    parameters.addParameter({"sign", HmacEncode(parameters.content, apiSecret)});
+    auto response_json = RESTClient::Get(baseUrl, endpoint, parameters);
     dom::parser parser;
-    dom::element response = parser.parse(r.text);
+    dom::element response = parser.parse(response_json);
 
     int retCode = response["ret_code"].get_int64();
 
@@ -152,14 +125,12 @@ void Bybit::cancelAllActiveOrders() {
 
     std::string endpoint = "/v2/private/order/cancelAll";
     // pairs have to be in alphabetic order
-    cpr::Payload payload = cpr::Payload{{"api_key", apiKey}, {"symbol", strategy->getSymbol()}, {"timestamp", expires}};
-
-    cpr::CurlHolder holder;
-    payload.AddPair({"sign", HmacEncode(payload.content, apiSecret)}, holder);
-
-    cpr::Response r = ApiPost(payload, endpoint);
+    auto payload = RESTClient::Payload{
+        {"api_key", apiKey}, {"symbol", strategy->getSymbol()}, {"timestamp", expires}};
+    payload.addPair({"sign", HmacEncode(payload.content, apiSecret)});
+    auto response_json = RESTClient::Post(baseUrl, endpoint, payload);
     dom::parser parser;
-    dom::element response = parser.parse(r.text);
+    dom::element response = parser.parse(response_json);
 
     int retCode = response["ret_code"].get_int64();
 
@@ -445,24 +416,22 @@ void Bybit::placeMarketOrder(const Order &ord) {
 
     std::string endpoint = "/v2/private/order/create";
     // pairs have to be in alphabetic order
-    cpr::Payload payload
-        = cpr::Payload{{"api_key", apiKey}, {"order_type", "Market"}, {"qty", std::to_string(std::abs(ord.qty))}};
-
-    cpr::CurlHolder holder;
+    auto payload = RESTClient::Payload{
+        {"api_key", apiKey}, {"order_type", "Market"}, {"qty", std::to_string(std::abs(ord.qty))}};
 
     if (ord.reduce) {
-        payload.AddPair({"reduce_only", "true"}, holder);
+        payload.addPair({"reduce_only", "true"});
     }
 
-    payload.AddPair({"side", ord.qty > 0 ? "Buy" : "Sell"}, holder);
-    payload.AddPair({"symbol", strategy->getSymbol()}, holder);
-    payload.AddPair({"time_in_force", "ImmediateOrCancel"}, holder);
-    payload.AddPair({"timestamp", expires}, holder);
-    payload.AddPair({"sign", HmacEncode(payload.content, apiSecret)}, holder);
+    payload.addPair({"side", ord.qty > 0 ? "Buy" : "Sell"});
+    payload.addPair({"symbol", strategy->getSymbol()});
+    payload.addPair({"time_in_force", "ImmediateOrCancel"});
+    payload.addPair({"timestamp", expires});
+    payload.addPair({"sign", HmacEncode(payload.content, apiSecret)});
 
-    cpr::Response r = ApiPost(payload, endpoint);
+    auto response_json = RESTClient::Post(baseUrl, endpoint, payload);
     dom::parser parser;
-    dom::element response = parser.parse(r.text);
+    dom::element response = parser.parse(response_json);
 
     int retCode = response["ret_code"].get_int64();
 
@@ -482,26 +451,24 @@ void Bybit::placeLimitOrder(const Order &ord) {
 
     std::string endpoint = "/v2/private/order/create";
     // pairs have to be in alphabetic order
-    cpr::Payload payload = cpr::Payload{{"api_key", apiKey},
-                                        {"order_type", "Limit"},
-                                        {"price", std::to_string(ord.price)},
-                                        {"qty", std::to_string(std::abs(ord.qty))}};
-
-    cpr::CurlHolder holder;
+    auto payload = RESTClient::Payload{{"api_key", apiKey},
+                                       {"order_type", "Limit"},
+                                       {"price", std::to_string(ord.price)},
+                                       {"qty", std::to_string(std::abs(ord.qty))}};
 
     if (ord.reduce) {
-        payload.AddPair({"reduce_only", "true"}, holder);
+        payload.addPair({"reduce_only", "true"});
     }
 
-    payload.AddPair({"side", ord.qty > 0 ? "Buy" : "Sell"}, holder);
-    payload.AddPair({"symbol", strategy->getSymbol()}, holder);
-    payload.AddPair({"time_in_force", "PostOnly"}, holder);
-    payload.AddPair({"timestamp", expires}, holder);
-    payload.AddPair({"sign", HmacEncode(payload.content, apiSecret)}, holder);
+    payload.addPair({"side", ord.qty > 0 ? "Buy" : "Sell"});
+    payload.addPair({"symbol", strategy->getSymbol()});
+    payload.addPair({"time_in_force", "PostOnly"});
+    payload.addPair({"timestamp", expires});
+    payload.addPair({"sign", HmacEncode(payload.content, apiSecret)});
 
-    cpr::Response r = ApiPost(payload, endpoint);
+    auto response_json = RESTClient::Post(baseUrl, endpoint, payload);
     dom::parser parser;
-    dom::element response = parser.parse(r.text);
+    dom::element response = parser.parse(response_json);
 
     int retCode = response["ret_code"].get_int64();
 
@@ -523,18 +490,16 @@ void Bybit::amendLimitOrder(const Order &ord) {
 
     std::string endpoint = "/open-api/order/replace";
     // pairs have to be in alphabetic order
-    cpr::Payload payload = cpr::Payload{{"api_key", apiKey},
-                                        {"order_id", ord.id},
-                                        {"p_r_price", std::to_string(ord.price)},
-                                        {"symbol", strategy->getSymbol()},
-                                        {"timestamp", expires}};
+    auto payload = RESTClient::Payload{{"api_key", apiKey},
+                                       {"order_id", ord.id},
+                                       {"p_r_price", std::to_string(ord.price)},
+                                       {"symbol", strategy->getSymbol()},
+                                       {"timestamp", expires}};
 
-    cpr::CurlHolder holder;
-    payload.AddPair({"sign", HmacEncode(payload.content, apiSecret)}, holder);
-
-    cpr::Response r = ApiPost(payload, endpoint);
+    payload.addPair({"sign", HmacEncode(payload.content, apiSecret)});
+    auto response_json = RESTClient::Post(baseUrl, endpoint, payload);
     dom::parser parser;
-    dom::element response = parser.parse(r.text);
+    dom::element response = parser.parse(response_json);
 
     int retCode = response["ret_code"].get_int64();
 
@@ -554,17 +519,14 @@ void Bybit::cancelActiveLimitOrder() {
 
     std::string endpoint = "/v2/private/order/cancel";
     // pairs have to be in alphabetic order
-    cpr::Payload payload = cpr::Payload{{"api_key", apiKey},
-                                        {"order_id", position->activeOrder->id},
-                                        {"symbol", strategy->getSymbol()},
-                                        {"timestamp", expires}};
-
-    cpr::CurlHolder holder;
-    payload.AddPair({"sign", HmacEncode(payload.content, apiSecret)}, holder);
-
-    cpr::Response r = ApiPost(payload, endpoint);
+    auto payload = RESTClient::Payload{{"api_key", apiKey},
+                                       {"order_id", position->activeOrder->id},
+                                       {"symbol", strategy->getSymbol()},
+                                       {"timestamp", expires}};
+    payload.addPair({"sign", HmacEncode(payload.content, apiSecret)});
+    auto response_json = RESTClient::Post(baseUrl, endpoint, payload);
     dom::parser parser;
-    dom::element response = parser.parse(r.text);
+    dom::element response = parser.parse(response_json);
 
     int retCode = response["ret_code"].get_int64();
 

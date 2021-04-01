@@ -5,7 +5,6 @@
 #ifndef BYTRA_BYBIT_H
 #define BYTRA_BYBIT_H
 
-#include <cpr/cpr.h>
 #include <simdjson.h>
 
 #include <boost/asio/ip/tcp.hpp>
@@ -47,10 +46,6 @@ class Bybit {
   public:
     Bybit(std::string &baseUrl, std::string &apiKey, std::string &apiSecret, std::string &websocketHost,
           std::string &websocketTarget, const std::shared_ptr<Strategy> &strategy);
-
-    cpr::Response ApiGet(const cpr::Parameters &params, const std::string &endpoint);
-
-    cpr::Response ApiPost(const cpr::Payload &payload, const std::string &endpoint);
 
     void loadCandles();
 

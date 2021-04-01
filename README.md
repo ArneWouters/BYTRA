@@ -37,8 +37,8 @@ make && sudo make install
 Installing Boost:
 
 ```bash
-wget https://sourceforge.net/projects/boost/files/boost/1.73.0/boost_1_73_0.tar.gz && tar -xvzf boost_1_73_0.tar.gz > /dev/null
-cd boost_1_73_0
+wget https://sourceforge.net/projects/boost/files/boost/1.75.0/boost_1_75_0.tar.gz && tar -xvzf boost_1_75_0.tar.gz > /dev/null
+cd boost_1_75_0
 ./bootstrap.sh --prefix=/usr
 ./b2 && sudo ./b2 install
 ```
@@ -101,5 +101,4 @@ See [Format.cmake](https://github.com/TheLartians/Format.cmake) for details.
 *   [toml++](https://github.com/marzer/tomlplusplus) - Header-only TOML parser and serializer for C++17 and later.
 *   [Boost.Beast](https://github.com/boostorg/beast) - HTTP and WebSocket built on Boost.Asio in C++11.
 *   [simdjson](https://github.com/lemire/simdjson) - Accelerate the parsing of JSON per se using commonly available SIMD instructions
-*   [cpr](https://github.com/whoshuu/cpr) - A modern C++ HTTP requests library with a simple but powerful interface. Modeled after the Python Requests module.
 *   [TA-Lib](https://sourceforge.net/projects/ta-lib/) - Technical analysis library with indicators like ADX, MACD, RSI, Stochastic, TRIX...

@@ -1,6 +1,6 @@
 [bybit-testnet]
 name = "Bybit Testnet"
-baseUrl = "https://api-testnet.bybit.com"
+baseUrl = "api-testnet.bybit.com"
 websocketHost = "stream-testnet.bybit.com"
 websocketTarget = "/realtime"
 apiKey = "${API_PRIVATE_KEY_TESTNET}"
@@ -8,7 +8,7 @@ apiSecret = "${PRIVATE_KEY_TESTNET}"
 
 [bybit]
 name = "Bybit"
-baseUrl = "https://api.bybit.com"
+baseUrl = "api.bybit.com"
 websocketHost = "stream.bybit.com"
 websocketTarget = "/realtime"
 apiKey = "insert_api_key"
