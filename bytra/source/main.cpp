@@ -70,7 +70,8 @@ int main(int argc, char **argv) {
 
     // spdlog setup
     try {
-        auto logger = spdlog::basic_logger_mt("basic_logger", "data/logs.txt");
+        std::string fname = "data/log-" + std::to_string((int) std::time(nullptr)) + ".txt";
+        auto logger = spdlog::basic_logger_mt("basic_logger", fname);
         spdlog::set_default_logger(logger);
         spdlog::flush_every(std::chrono::seconds(1));
         spdlog::flush_on(spdlog::level::err);

@@ -2,4 +2,4 @@
 cmake-*
 build/
 data/configuration.toml
-data/logs.txt
+data/log-*

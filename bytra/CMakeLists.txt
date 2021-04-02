@@ -35,13 +35,13 @@ CPMAddPackage(
 CPMAddPackage(
   NAME spdlog
   GITHUB_REPOSITORY gabime/spdlog
-  VERSION 1.8.1
+  VERSION 1.8.5
 )
 
 CPMAddPackage(
   NAME simdjson
   GITHUB_REPOSITORY simdjson/simdjson
-  VERSION 0.6.0
+  VERSION 0.9.2
 )
 
 find_package(ta_lib)
