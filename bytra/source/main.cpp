@@ -11,7 +11,9 @@
 #include <csignal>
 #include <fstream>
 #include <iostream>
+#include <linenoise/linenoise.hpp>
 #include <string>
+#include <thread>
 #include <toml++/toml.hpp>
 
 #include "Bybit.h"
@@ -41,6 +43,56 @@ void signal_callback_handler(int signum) {
     spdlog::debug("Terminating program.");
     std::cout << RED << "✗ " << RESET << "Program terminated." << std::endl;
     exit(signum);
+}
+
+void run(std::shared_ptr<WebSocket> ws, std::shared_ptr<Bybit> bybit) {
+    ws->connect(bybit->getTopics());
+    int websocketHeartbeatTimer = std::time(nullptr);
+    int websocketOrderBookSyncTimer = std::time(nullptr);
+
+    // Program Loop
+    for (;;) {
+        while (ws->isConnected()) {
+            std::string message{};
+
+            try {
+                message = ws->readBuffer();
+            } catch (const boost::system::system_error &err) {
+                if (err.code() == boost::asio::error::eof) {
+                    spdlog::error("boost::system::system_error: {}", err.what());
+                    break;
+                }
+
+                throw boost::system::system_error(err);
+            }
+
+            if (!message.empty()) {
+                bybit->parseWebsocketMessage(message);
+            }
+
+            bybit->doAutomatedTrading();
+            bybit->removeUnusedCandles();
+
+            int currentTime = std::time(nullptr);
+
+            // Send heartbeat packet every 45 seconds to maintain websocket connection
+            if (currentTime - websocketHeartbeatTimer > 45) {
+                websocketHeartbeatTimer = currentTime;
+                ws->sendHeartbeat();
+            }
+
+            // Sync order book after an hour
+            if (currentTime - websocketOrderBookSyncTimer > 3600) {
+                websocketOrderBookSyncTimer = currentTime;
+                bybit->syncOrderBook();
+            }
+        }
+
+        sleep(3);
+        std::cout << "Attempting to reconnect..." << std::endl;
+        ws->disconnect();
+        ws->connect(bybit->getTopics());
+    }
 }
 
 int main(int argc, char **argv) {
@@ -125,57 +177,41 @@ int main(int argc, char **argv) {
     checkEnvVar(apiKey);
     checkEnvVar(apiSecret);
 
-    auto bybit = std::make_shared<Bybit>(baseUrl, apiKey, apiSecret, websocketHost, websocketTarget,
-                                         validStrategies[strategy]);
+    auto ws = std::make_shared<WebSocket>(websocketHost, websocketTarget, apiKey, apiSecret);
+    auto bybit = std::make_shared<Bybit>(baseUrl, apiKey, apiSecret, ws, validStrategies[strategy]);
 
     std::cout << GREEN << " ✔" << RESET << std::endl;
 
-    // The io_context is required for all I/O
-    net::io_context ioc;
-
-    // The SSL context is required, and holds certificates
-    ssl::context ctx{ssl::context::tlsv12_client};
-
+    // Set max length of the history
+    linenoise::SetHistoryMaxLen(10);
     std::cout << "Connecting..." << std::endl;
-    bybit->connect(ioc, ctx);
-    int websocketHeartbeatTimer = std::time(nullptr);
-    int websocketOrderBookSyncTimer = std::time(nullptr);
+    std::thread t1(run, ws, bybit);
 
     // Program Loop
     for (;;) {
-        while (bybit->isConnected()) {
-            try {
-                bybit->readWebsocket();
-            } catch (const boost::system::system_error &err) {
-                if (err.code() == boost::asio::error::eof) {
-                    spdlog::error("boost::system::system_error: {}", err.what());
-                    break;
-                }
+        // Read line
+        std::string line;
+        linenoise::Readline("BYTRA> ", line);
 
-                throw boost::system::system_error(err);
+//        if (line == "position") {
+//            // get position and display it
+//        }
+
+        if (line == "strategies") {
+            std::cout << "Available strategies:" << std::endl;
+            for (auto &[key, value]: validStrategies) {
+                std::cout << " - " << key << std::endl;
             }
-
-            bybit->doAutomatedTrading();
-            bybit->removeUnusedCandles();
-
-            int currentTime = std::time(nullptr);
-
-            // Send heartbeat packet every 45 seconds to maintain websocket connection
-            if (currentTime - websocketHeartbeatTimer > 45) {
-                websocketHeartbeatTimer = currentTime;
-                bybit->sendWebsocketHeartbeat();
-            }
-
-            // Sync order book after an hour
-            if (currentTime - websocketOrderBookSyncTimer > 3600) {
-                websocketOrderBookSyncTimer = currentTime;
-                bybit->syncOrderBook();
-            }
+        } else if (line == "quit") {
+            // warn if open positions
+            // ask to close? or just close them and close connections with bybit gracefully
+            break;
         }
-        sleep(3);
-        std::cout << "Attempting to reconnect..." << std::endl;
-        bybit->disconnect();
-        bybit->connect(ioc, ctx);
+
+        std::cout <<  "echo: '" << line << "'" << std::endl;
+
+        // Add text to history
+        linenoise::AddHistory(line.c_str());
     }
 
     return 0;

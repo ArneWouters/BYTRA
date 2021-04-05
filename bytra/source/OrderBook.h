@@ -6,6 +6,7 @@
 #define BYTRA_ORDERBOOK_H
 
 #include <map>
+#include <limits>
 
 struct OrderBookEntry {
     double price;

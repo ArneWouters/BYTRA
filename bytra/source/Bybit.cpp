@@ -4,36 +4,21 @@
 
 #include "Bybit.h"
 
-#include <simdjson/simdjson.h>
+#include <simdjson.h>
 #include <spdlog/spdlog.h>
 
-#include <boost/asio/connect.hpp>
-#include <boost/asio/ip/tcp.hpp>
-#include <boost/asio/ssl.hpp>
-#include <boost/beast/core.hpp>
-#include <boost/beast/websocket.hpp>
-#include <boost/beast/websocket/ssl.hpp>
-
 #include "Encryption.h"
-#include "TerminalColors.h"
 #include "http/RESTClient.hpp"
+#include "ws/WebSocket.h"
 
-namespace beast = boost::beast;          // from <boost/beast.hpp>
-namespace http = beast::http;            // from <boost/beast/http.hpp>
-namespace websocket = beast::websocket;  // from <boost/beast/websocket.hpp>
-namespace ssl = boost::asio::ssl;        // from <boost/asio/ssl.hpp>
-namespace net = boost::asio;             // from <boost/asio.hpp>
-using tcp = boost::asio::ip::tcp;        // from <boost/asio/ip/tcp.hpp>
 using namespace simdjson;
 using namespace std::chrono;
 
-Bybit::Bybit(std::string &baseUrl, std::string &apiKey, std::string &apiSecret, std::string &websocketHost,
-             std::string &websocketTarget, const std::shared_ptr<Strategy> &strategy) {
+Bybit::Bybit(std::string &baseUrl, std::string &apiKey, std::string &apiSecret, std::shared_ptr<WebSocket> &ws,
+             const std::shared_ptr<Strategy> &strategy) {
     this->baseUrl = baseUrl;
     this->apiKey = apiKey;
     this->apiSecret = apiSecret;
-    this->websocketHost = websocketHost;
-    this->websocketTarget = websocketTarget;
     this->strategy = strategy;
 
     for (const auto &tf : strategy->getTimeframes()) {
@@ -51,6 +36,11 @@ Bybit::Bybit(std::string &baseUrl, std::string &apiKey, std::string &apiSecret, 
     position = std::make_shared<Position>();
     position->stopLossPercentage = strategy->getStopLossPercentage();
     orderBook = std::make_shared<OrderBook>();
+
+    cancelAllActiveOrders();
+    loadPosition();
+
+    websocket = ws;
 }
 
 void Bybit::loadCandles() {
@@ -140,273 +130,12 @@ void Bybit::cancelAllActiveOrders() {
     }
 }
 
-void Bybit::connect(net::io_context &ioc, ssl::context &ctx) {
-    cancelAllActiveOrders();
-    loadPosition();
-
-    const std::string port = "443";
-    std::string expires
-        = std::to_string(::duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count() + 5000);
-
-    std::string auth_msg = R"({"op":"auth","args":[")" + apiKey + R"(",")" + expires + R"(",")"
-                           + HmacEncode("GET/realtime" + expires, apiSecret) + R"("]})";
-    std::string msg
-        = R"({"op": "subscribe", "args": ["position","order","orderBookL2_25.)" + strategy->getSymbol() + "\",";
-
-    for (auto const &[tf, val] : candles) {
-        msg.append("\"klineV2." + tf.symbol + ".");
-        msg.append(strategy->getSymbol());
-        msg.append("\",");
-    }
-
-    msg.pop_back();
-    msg.append("]}");
-
-    // These objects perform our I/O
-    tcp::resolver resolver{ioc};
-
-    websocket = std::make_shared<websocket::stream<ssl::stream<tcp::socket>>>(
-        websocket::stream<ssl::stream<tcp::socket>>{ioc, ctx});
-
-    // Set SNI Hostname (many hosts need this to handshake successfully)
-    if (!SSL_set_tlsext_host_name(websocket->next_layer().native_handle(), websocketHost.c_str())) {
-        boost::system::error_code ec{static_cast<int>(::ERR_get_error()), boost::asio::error::get_ssl_category()};
-        throw boost::system::system_error{ec};
-    }
-
-    // Look up the domain name
-    auto const results = resolver.resolve(websocketHost, port);
-
-    // Make the connection on the IP address we get from a lookup
-    net::connect(websocket->next_layer().next_layer(), results);
-
-    // Perform the SSL handshake
-    websocket->next_layer().handshake(ssl::stream_base::client);
-
-    // Set a decorator to change the User-Agent of the handshake
-    websocket->set_option(websocket::stream_base::decorator([](websocket::request_type &req) {
-        req.set(http::field::user_agent, std::string(BOOST_BEAST_VERSION_STRING) + " websocket-client-coro");
-    }));
-
-    // Perform the websocket handshake
-    websocket->handshake(websocketHost, websocketTarget);
-
-    // Send the message
-    websocket->write(net::buffer(auth_msg));
-    websocket->write(net::buffer(msg));
-}
-
-[[maybe_unused]] void Bybit::disconnect() {
-    if (!websocket) {
-        return;
-    }
-    websocket->close(websocket::close_code::normal);
-    websocket->next_layer().shutdown();
-    websocket->next_layer().next_layer().shutdown(boost::asio::socket_base::shutdown_type::shutdown_both);
-    websocket.reset();
-}
-
-bool Bybit::isConnected() {
-    if (!websocket) {
-        return false;
-    }
-    return websocket->is_open();
-}
-
-void Bybit::readWebsocket() {
-    websocket->read(websocketBuffer);
-
-    // Check for a message in our buffer
-    if (websocketBuffer.size() != 0) {
-        parseWebsocketMsg(beast::buffers_to_string(websocketBuffer.data()));
-        websocketBuffer.clear();
-    }
-}
-
-void Bybit::parseWebsocketMsg(const std::string &msg) {
-    //std::cout << msg << std::endl;
-
-    dom::parser parser;
-    dom::element response = parser.parse(msg);
-    dom::element elem;
-
-    // authentication and subscribe messages
-    if (auto error = response["success"].get(elem); !error) {
-        bool success = (bool) response["success"];
-
-        if(!success) {
-            spdlog::error("Websocket: {}", (std::string) response["ret_msg"]);
-            return;
-        }
-
-        std::string op = (std::string)response["request"]["op"];
-
-        if (op == "auth") {
-            std::cout << "Connected and authenticated with Bybit websocket " << GREEN << "✔" << RESET << std::endl;
-            spdlog::info("[WebSocket] Connected to the Bybit Realtime API.");
-
-        } else if (op == "subscribe") {
-            for (dom::element item : response["request"]["args"]) {
-                spdlog::info("[WebSocket] Successfully subscribed to " + (std::string)item);
-            }
-        }
-        return;
-    }
-
-    if (auto error = response["topic"].get(elem); !error) {
-        std::string topic = (std::string)response["topic"];
-
-        if (topic == "position") {
-            for (dom::object item : response["data"]) {
-                double entryPrice = std::stod((std::string)item["entry_price"]);
-                std::string side = (std::string)item["side"];
-                long qty = (long)item["size"];
-                if (side == "Sell") {
-                    qty = -qty;
-                }
-
-                position->update(qty, entryPrice);
-            }
-
-        } else if (topic == "order") {
-            for (dom::object item : response["data"]) {
-                std::string orderType = (std::string)item["order_type"];
-                std::string orderStatus = (std::string)item["order_status"];
-                double askPrice = orderBook->askPrice();
-                double bidPrice = orderBook->bidPrice();
-
-                if (orderStatus == "Cancelled" && position->activeOrder) {
-                    if (position->activeOrder->isBuy()) {
-                        if (bidPrice >= position->activeOrder->priceInterval.first
-                            && bidPrice <= position->activeOrder->priceInterval.second) {
-                            position->activeOrder->price = bidPrice;
-                            placeLimitOrder(*position->activeOrder);
-                        } else if (position->activeOrder->reduce) {
-                            placeMarketOrder(*position->activeOrder);
-                        } else {
-                            position->activeOrder = nullptr;
-                        }
-                    } else {
-                        if (askPrice >= position->activeOrder->priceInterval.first
-                            && askPrice <= position->activeOrder->priceInterval.second) {
-                            position->activeOrder->price = askPrice;
-                            placeLimitOrder(*position->activeOrder);
-                        } else if (position->activeOrder->reduce) {
-                            placeMarketOrder(*position->activeOrder);
-                        } else {
-                            position->activeOrder = nullptr;
-                        }
-                    }
-                } else if (orderStatus == "Filled") {
-                    position->activeOrder = nullptr;
-                }
-            }
-        } else if (topic.size() > 7 && topic.substr(0, 7) == "klineV2") {
-            std::string::size_type n = topic.find('.');
-            std::string::size_type n2 = topic.find('.', n + 1);
-
-            std::string interval = topic.substr(n + 1, n2 - n - 1);
-            std::string symbol = topic.substr(n2 + 1);
-
-            for (dom::object item : response["data"]) {
-                bool confirm = (bool)item["confirm"];
-                if (!confirm) {
-                    continue;
-                }
-
-                // create candle
-                double open = (double)item["open"];
-                double high = (double)item["high"];
-                double low = (double)item["low"];
-                double close = (double)item["close"];
-                double volume = (double)item["volume"];
-                long timestamp = (long)item["start"];
-                auto candle = std::make_shared<Candle>(Candle{open, high, low, close, volume, timestamp});
-
-                // add candle
-                for (auto &[tf, vec] : candles) {
-                    if (tf.symbol == interval && vec.back()->timestamp != candle->timestamp) {
-                        vec.push_back(candle);
-                        newCandleAdded = true;
-                        spdlog::debug("Added Candle");
-                        break;
-                    }
-                }
-            }
-        } else if (topic.size() > 14 && topic.substr(0, 14) == "orderBookL2_25") {
-            std::string type = (std::string)response["type"];
-
-            if (type == "snapshot") {
-                orderBook = std::make_shared<OrderBook>();
-
-                for (dom::object item : response["data"]) {
-                    long id = (long)item["id"];
-                    double price = std::stod((std::string)item["price"]);
-                    std::string side = (std::string)item["side"];
-                    long size = (long)item["size"];
-
-                    if (side == "Sell") {
-                        orderBook->addAskEntry(id, OrderBookEntry(price, size));
-                    } else if (side == "Buy") {
-                        orderBook->addBidEntry(id, OrderBookEntry(price, size));
-                    }
-                }
-
-            } else if (type == "delta") {
-                for (dom::object item : response["data"]["delete"]) {
-                    long id = (long)item["id"];
-                    std::string side = (std::string)item["side"];
-
-                    if (side == "Sell") {
-                        orderBook->removeAskEntry(id);
-                    } else if (side == "Buy") {
-                        orderBook->removeBidEntry(id);
-                    }
-                }
-
-                for (dom::object item : response["data"]["update"]) {
-                    long id = (long)item["id"];
-                    std::string side = (std::string)item["side"];
-                    long size = (long)item["size"];
-
-                    if (side == "Sell") {
-                        orderBook->updateAskEntry(id, size);
-                    } else if (side == "Buy") {
-                        orderBook->updateBidEntry(id, size);
-                    }
-                }
-
-                for (dom::object item : response["data"]["insert"]) {
-                    long id = (long)item["id"];
-                    double price = std::stod((std::string)item["price"]);
-                    std::string side = (std::string)item["side"];
-                    long size = (long)item["size"];
-
-                    if (side == "Sell") {
-                        orderBook->addAskEntry(id, OrderBookEntry(price, size));
-                    } else if (side == "Buy") {
-                        orderBook->addBidEntry(id, OrderBookEntry(price, size));
-                    }
-                }
-            }
-        }
-    } else {
-        spdlog::debug("websocket msg: {}", msg);
-    }
-}
-
-void Bybit::sendWebsocketHeartbeat() {
-    if (isConnected()) {
-        websocket->write(net::buffer(R"({"op":"ping"})"));
-    }
-}
-
 void Bybit::syncOrderBook() {
-    if (isConnected()) {
-        websocket->write(
-            net::buffer(R"({"op": "unsubscribe", "args": ["orderBookL2_25.)" + strategy->getSymbol() + R"("]})"));
-        websocket->write(
-            net::buffer(R"({"op": "subscribe", "args": ["orderBookL2_25.)" + strategy->getSymbol() + R"("]})"));
+    if (websocket->isConnected()) {
+        websocket->writeMessage(
+            R"({"op": "unsubscribe", "args": ["orderBookL2_25.)" + strategy->getSymbol() + R"("]})");
+        websocket->writeMessage(
+            R"({"op": "subscribe", "args": ["orderBookL2_25.)" + strategy->getSymbol() + R"("]})");
     }
 }
 
@@ -653,4 +382,193 @@ void Bybit::removeUnusedCandles() {
             candles[tf] = new_vec;
         }
     }
+}
+
+void Bybit::parseWebsocketMessage(const std::string &msg) {
+    //std::cout << msg << std::endl;
+
+    dom::parser parser;
+    dom::element response = parser.parse(msg);
+    dom::element elem;
+
+    // authentication and subscribe messages
+    if (auto error = response["success"].get(elem); !error) {
+        bool success = (bool) response["success"];
+
+        if(!success) {
+            spdlog::error("Websocket: {}", (std::string) response["ret_msg"]);
+            return;
+        }
+
+        std::string op = (std::string)response["request"]["op"];
+
+        if (op == "auth") {
+            std::cout << "Connected and authenticated with Bybit websocket!" << std::endl;
+            spdlog::info("[WebSocket] Connected to the Bybit Realtime API.");
+
+        } else if (op == "subscribe") {
+            for (dom::element item : response["request"]["args"]) {
+                spdlog::info("[WebSocket] Successfully subscribed to " + (std::string)item);
+            }
+        }
+        return;
+    }
+
+    if (auto error = response["topic"].get(elem); !error) {
+        std::string topic = (std::string)response["topic"];
+
+        if (topic == "position") {
+            for (dom::object item : response["data"]) {
+                double entryPrice = std::stod((std::string)item["entry_price"]);
+                std::string side = (std::string)item["side"];
+                long qty = (long)item["size"];
+                if (side == "Sell") {
+                    qty = -qty;
+                }
+
+                position->update(qty, entryPrice);
+            }
+
+        } else if (topic == "order") {
+            for (dom::object item : response["data"]) {
+                std::string orderType = (std::string)item["order_type"];
+                std::string orderStatus = (std::string)item["order_status"];
+                double askPrice = orderBook->askPrice();
+                double bidPrice = orderBook->bidPrice();
+
+                if (orderStatus == "Cancelled" && position->activeOrder) {
+                    if (position->activeOrder->isBuy()) {
+                        if (bidPrice >= position->activeOrder->priceInterval.first
+                            && bidPrice <= position->activeOrder->priceInterval.second) {
+                            position->activeOrder->price = bidPrice;
+                            placeLimitOrder(*position->activeOrder);
+                        } else if (position->activeOrder->reduce) {
+                            placeMarketOrder(*position->activeOrder);
+                        } else {
+                            position->activeOrder = nullptr;
+                        }
+                    } else {
+                        if (askPrice >= position->activeOrder->priceInterval.first
+                            && askPrice <= position->activeOrder->priceInterval.second) {
+                            position->activeOrder->price = askPrice;
+                            placeLimitOrder(*position->activeOrder);
+                        } else if (position->activeOrder->reduce) {
+                            placeMarketOrder(*position->activeOrder);
+                        } else {
+                            position->activeOrder = nullptr;
+                        }
+                    }
+                } else if (orderStatus == "Filled") {
+                    position->activeOrder = nullptr;
+                }
+            }
+        } else if (topic.size() > 7 && topic.substr(0, 7) == "klineV2") {
+            std::string::size_type n = topic.find('.');
+            std::string::size_type n2 = topic.find('.', n + 1);
+
+            std::string interval = topic.substr(n + 1, n2 - n - 1);
+            std::string symbol = topic.substr(n2 + 1);
+
+            for (dom::object item : response["data"]) {
+                bool confirm = (bool)item["confirm"];
+                if (!confirm) {
+                    continue;
+                }
+
+                // create candle
+                double open = (double)item["open"];
+                double high = (double)item["high"];
+                double low = (double)item["low"];
+                double close = (double)item["close"];
+                double volume = (double)item["volume"];
+                long timestamp = (long)item["start"];
+                auto candle = std::make_shared<Candle>(Candle{open, high, low, close, volume, timestamp});
+
+                // add candle
+                for (auto &[tf, vec] : candles) {
+                    if (tf.symbol == interval && vec.back()->timestamp != candle->timestamp) {
+                        vec.push_back(candle);
+                        newCandleAdded = true;
+                        spdlog::debug("Added Candle");
+                        break;
+                    }
+                }
+            }
+        } else if (topic.size() > 14 && topic.substr(0, 14) == "orderBookL2_25") {
+            std::string type = (std::string)response["type"];
+
+            if (type == "snapshot") {
+                orderBook = std::make_shared<OrderBook>();
+
+                for (dom::object item : response["data"]) {
+                    long id = (long)item["id"];
+                    double price = std::stod((std::string)item["price"]);
+                    std::string side = (std::string)item["side"];
+                    long size = (long)item["size"];
+
+                    if (side == "Sell") {
+                        orderBook->addAskEntry(id, OrderBookEntry(price, size));
+                    } else if (side == "Buy") {
+                        orderBook->addBidEntry(id, OrderBookEntry(price, size));
+                    }
+                }
+
+            } else if (type == "delta") {
+                for (dom::object item : response["data"]["delete"]) {
+                    long id = (long)item["id"];
+                    std::string side = (std::string)item["side"];
+
+                    if (side == "Sell") {
+                        orderBook->removeAskEntry(id);
+                    } else if (side == "Buy") {
+                        orderBook->removeBidEntry(id);
+                    }
+                }
+
+                for (dom::object item : response["data"]["update"]) {
+                    long id = (long)item["id"];
+                    std::string side = (std::string)item["side"];
+                    long size = (long)item["size"];
+
+                    if (side == "Sell") {
+                        orderBook->updateAskEntry(id, size);
+                    } else if (side == "Buy") {
+                        orderBook->updateBidEntry(id, size);
+                    }
+                }
+
+                for (dom::object item : response["data"]["insert"]) {
+                    long id = (long)item["id"];
+                    double price = std::stod((std::string)item["price"]);
+                    std::string side = (std::string)item["side"];
+                    long size = (long)item["size"];
+
+                    if (side == "Sell") {
+                        orderBook->addAskEntry(id, OrderBookEntry(price, size));
+                    } else if (side == "Buy") {
+                        orderBook->addBidEntry(id, OrderBookEntry(price, size));
+                    }
+                }
+            }
+        }
+    } else {
+        spdlog::debug("websocket msg: {}", msg);
+    }
+}
+
+std::vector<std::string> Bybit::getTopics() {
+    std::vector<std::string> topics{
+        "position",
+        "order",
+        "orderBookL2_25." + strategy->getSymbol()
+    };
+
+    for (auto const &[tf, val] : candles) {
+        std::string msg{};
+        msg.append("klineV2." + tf.symbol + ".");
+        msg.append(strategy->getSymbol());
+        topics.push_back(msg);
+    }
+
+    return topics;
 }
