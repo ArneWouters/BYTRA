@@ -11,7 +11,6 @@
 #include <csignal>
 #include <fstream>
 #include <iostream>
-#include <linenoise/linenoise.hpp>
 #include <string>
 #include <thread>
 #include <toml++/toml.hpp>
@@ -182,37 +181,11 @@ int main(int argc, char **argv) {
 
     std::cout << GREEN << " ✔" << RESET << std::endl;
 
-    // Set max length of the history
-    linenoise::SetHistoryMaxLen(10);
+    // Check for open orders, ask to cancel them or abort
+    // Check for open positions, ask to close them or abort
+
     std::cout << "Connecting..." << std::endl;
-    std::thread t1(run, ws, bybit);
-
-    // Program Loop
-    for (;;) {
-        // Read line
-        std::string line;
-        linenoise::Readline("BYTRA> ", line);
-
-//        if (line == "position") {
-//            // get position and display it
-//        }
-
-        if (line == "strategies") {
-            std::cout << "Available strategies:" << std::endl;
-            for (auto &[key, value]: validStrategies) {
-                std::cout << " - " << key << std::endl;
-            }
-        } else if (line == "quit") {
-            // warn if open positions
-            // ask to close? or just close them and close connections with bybit gracefully
-            break;
-        }
-
-        std::cout <<  "echo: '" << line << "'" << std::endl;
-
-        // Add text to history
-        linenoise::AddHistory(line.c_str());
-    }
+    run(ws, bybit);
 
     return 0;
 }

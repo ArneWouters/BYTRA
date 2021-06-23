@@ -2,8 +2,8 @@
 // Created by Arne Wouters on 02/08/2020.
 //
 
-#ifndef MEXTRA_RSI_H
-#define MEXTRA_RSI_H
+#ifndef BYTRA_RSI_H
+#define BYTRA_RSI_H
 
 #include <map>
 #include <string>
@@ -25,4 +25,4 @@ class Rsi : public Strategy {
     double calculateRSI(std::map<TimeFrame, std::vector<std::shared_ptr<Candle>>> &candles);
 };
 
-#endif  // MEXTRA_RSI_H
+#endif  // BYTRA_RSI_H

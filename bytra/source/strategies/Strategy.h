@@ -2,8 +2,8 @@
 // Created by Arne Wouters on 30/07/2020.
 //
 
-#ifndef MEXTRA_STRATEGY_H
-#define MEXTRA_STRATEGY_H
+#ifndef BYTRA_STRATEGY_H
+#define BYTRA_STRATEGY_H
 
 #include <map>
 #include <memory>
@@ -48,4 +48,4 @@ class Strategy {
     [[nodiscard]] double getStopLossPercentage() const { return stopLossPercentage; }
 };
 
-#endif  // MEXTRA_STRATEGY_H
+#endif  // BYTRA_STRATEGY_H
