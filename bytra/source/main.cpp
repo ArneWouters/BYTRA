@@ -44,10 +44,10 @@ void signal_callback_handler(int signum) {
     exit(signum);
 }
 
-void run(std::shared_ptr<WebSocket> ws, std::shared_ptr<Bybit> bybit) {
+void run(std::shared_ptr<WebSocket> &ws, std::shared_ptr<Bybit> &bybit) {
     ws->connect(bybit->getTopics());
-    int websocketHeartbeatTimer = std::time(nullptr);
-    int websocketOrderBookSyncTimer = std::time(nullptr);
+    long websocketHeartbeatTimer = std::time(nullptr);
+    long websocketOrderBookSyncTimer = std::time(nullptr);
 
     // Program Loop
     for (;;) {
@@ -72,7 +72,7 @@ void run(std::shared_ptr<WebSocket> ws, std::shared_ptr<Bybit> bybit) {
             bybit->doAutomatedTrading();
             bybit->removeUnusedCandles();
 
-            int currentTime = std::time(nullptr);
+            long currentTime = std::time(nullptr);
 
             // Send heartbeat packet every 45 seconds to maintain websocket connection
             if (currentTime - websocketHeartbeatTimer > 45) {
@@ -91,6 +91,25 @@ void run(std::shared_ptr<WebSocket> ws, std::shared_ptr<Bybit> bybit) {
         std::cout << "Attempting to reconnect..." << std::endl;
         ws->disconnect();
         ws->connect(bybit->getTopics());
+    }
+}
+
+void checkOrders(std::shared_ptr<Bybit> &bybit) {
+    // Check for active orders, ask to cancel them or abort
+    std::string word;
+    std::cout << "Active orders found! Do you want Bytra to cancel them? [yes/no] " << std::endl;
+
+    while (std::cin >> word) {
+        if (word == "y") {
+            bybit->cancelAllActiveOrders();
+            spdlog::info("Cancelled all active orders.");
+            break;
+        } else if (word == "n") {
+            std::cout << "Please cancel the active orders before using this program." << std::endl;
+            signal_callback_handler(0);
+        } else {
+            std::cout << "Please respond with y(es) or n(o)." << std::endl;
+        }
     }
 }
 
@@ -181,8 +200,8 @@ int main(int argc, char **argv) {
 
     std::cout << GREEN << " ✔" << RESET << std::endl;
 
-    // Check for open orders, ask to cancel them or abort
-    // Check for open positions, ask to close them or abort
+    // Check for active orders
+    checkOrders(bybit);
 
     std::cout << "Connecting..." << std::endl;
     run(ws, bybit);

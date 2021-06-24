@@ -36,10 +36,7 @@ Bybit::Bybit(std::string &baseUrl, std::string &apiKey, std::string &apiSecret, 
     position = std::make_shared<Position>();
     position->stopLossPercentage = strategy->getStopLossPercentage();
     orderBook = std::make_shared<OrderBook>();
-
-    cancelAllActiveOrders();
     loadPosition();
-
     websocket = ws;
 }
 
