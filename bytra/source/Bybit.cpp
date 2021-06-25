@@ -106,6 +106,30 @@ void Bybit::loadPosition() {
     position->update(qty, entryPrice);
 }
 
+simdjson::simdjson_result<ondemand::array> Bybit::getActiveOrders() {
+    std::string expires
+        = std::to_string(duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count() + 1000);
+
+    std::string endpoint = "/v2/private/order";
+    auto parameters = RESTClient::Parameters{
+        {"api_key", apiKey}, {"symbol", strategy->getSymbol()}, {"timestamp", expires}};
+    parameters.addParameter({"sign", HmacEncode(parameters.content, apiSecret)});
+    auto response_json = padded_string(RESTClient::Get(baseUrl, endpoint, parameters));
+
+    ondemand::parser parser;
+    auto response = parser.iterate(response_json);
+    long retCode = response["ret_code"].get_int64();
+
+    if (retCode != 0) {
+        std::string_view returnMsg;
+        response["ret_msg"].get(returnMsg);
+        spdlog::error("Bybit::getActiveOrders - bad response - " + (std::string)returnMsg);
+        throw std::runtime_error("Bad API response.");
+    }
+
+    return response.find_field("result").get_array();
+}
+
 void Bybit::cancelAllActiveOrders() {
     std::string expires
         = std::to_string(duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count() + 1000);

@@ -10,6 +10,8 @@
 #include <string>
 #include <vector>
 
+#include <simdjson.h>
+
 #include "Candle.h"
 #include "OrderBook.h"
 #include "Position.h"
@@ -37,6 +39,8 @@ class Bybit {
     void loadCandles();
 
     void loadPosition();
+
+    simdjson::simdjson_result<simdjson::ondemand::array> getActiveOrders();
 
     void cancelAllActiveOrders();
 

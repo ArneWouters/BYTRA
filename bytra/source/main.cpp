@@ -14,6 +14,7 @@
 #include <string>
 #include <thread>
 #include <toml++/toml.hpp>
+#include <simdjson.h>
 
 #include "Bybit.h"
 #include "TerminalColors.h"
@@ -96,6 +97,9 @@ void run(std::shared_ptr<WebSocket> &ws, std::shared_ptr<Bybit> &bybit) {
 
 void checkOrders(std::shared_ptr<Bybit> &bybit) {
     // Check for active orders, ask to cancel them or abort
+    auto orders = bybit->getActiveOrders();
+    if (orders.begin() == orders.end()) return;
+
     std::string word;
     std::cout << "Active orders found! Do you want Bytra to cancel them? [yes/no] " << std::endl;
 
