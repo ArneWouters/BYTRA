@@ -49,6 +49,7 @@ void run(std::shared_ptr<WebSocket> &ws, std::shared_ptr<Bybit> &bybit) {
     ws->connect(bybit->getTopics());
     long websocketHeartbeatTimer = std::time(nullptr);
     long websocketOrderBookSyncTimer = std::time(nullptr);
+    long positionUpdateTimer = std::time(nullptr);
 
     // Program Loop
     for (;;) {
@@ -85,6 +86,13 @@ void run(std::shared_ptr<WebSocket> &ws, std::shared_ptr<Bybit> &bybit) {
             if (currentTime - websocketOrderBookSyncTimer > 3600) {
                 websocketOrderBookSyncTimer = currentTime;
                 bybit->syncOrderBook();
+            }
+
+            // Update position
+            if (currentTime - positionUpdateTimer > 1) {
+                bybit->setPosition(bybit->getPosition());
+                bybit->printPosition();
+                positionUpdateTimer = currentTime;
             }
         }
 
@@ -188,7 +196,6 @@ int main(int argc, char **argv) {
     std::cout << " - Setting up strategy" << std::flush;
 
     std::string configEntry = t ? "bybit-testnet" : "bybit";
-
     std::string baseUrl = *tbl[configEntry]["baseUrl"].value<std::string>();
     std::string websocketHost = *tbl[configEntry]["websocketHost"].value<std::string>();
     std::string websocketTarget = *tbl[configEntry]["websocketTarget"].value<std::string>();

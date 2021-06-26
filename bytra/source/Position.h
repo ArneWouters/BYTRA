@@ -12,30 +12,32 @@
 
 class Position {
   public:
-    long qty = 0;
-    double entryPrice = 0;
-    double stopLossPercentage = 0.03;
-    double stopLossPrice = 0;
-    std::shared_ptr<Order> activeOrder;
+    long size;
+    double entryPrice;
+    double liquidationPrice;
+    double unrealisedPnl;
+    double positionMargin;
 
-    Position() = default;
-
-    [[nodiscard]] bool isShort() const { return qty < 0; }
-
-    [[nodiscard]] bool isLong() const { return qty > 0; }
-
-    void update(const long &newQty, const double &newPrice) {
-        qty = newQty;
-        entryPrice = newPrice;
-
-        if (qty == 0) {
-            return;
-        } else if (isLong()) {
-            stopLossPrice = entryPrice - entryPrice * stopLossPercentage;
-        } else {
-            stopLossPrice = entryPrice + entryPrice * stopLossPercentage;
-        }
+    Position() {
+        size = 0;
+        entryPrice = 0.0;
+        liquidationPrice = 0.0;
+        unrealisedPnl = 0.0;
+        positionMargin = 0.0;
     }
+
+    Position(long &size, double &entryPrice, double &liquidationPrice, double &unrealisedPnl, double &positionMargin) {
+        this->size = size;
+        this->entryPrice = entryPrice;
+        this->liquidationPrice = liquidationPrice;
+        this->unrealisedPnl = unrealisedPnl;
+        this->positionMargin = positionMargin;
+    }
+
+    [[nodiscard]] bool isShort() const { return size < 0; }
+
+    [[nodiscard]] bool isLong() const { return size > 0; }
+
 };
 
 #endif  // MEXTRA_POSITION_H

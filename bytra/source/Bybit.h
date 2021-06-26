@@ -27,9 +27,10 @@ class Bybit {
     std::map<TimeFrame, std::vector<std::shared_ptr<Candle>>> candles;
     std::vector<std::string> allowedTimeframes = {"1", "3", "5", "15", "30", "60", "120", "240", "360", "D", "W", "M"};
     std::shared_ptr<WebSocket> websocket;
-    std::shared_ptr<Position> position;
+    Position position;
     std::shared_ptr<Strategy> strategy;
     std::shared_ptr<OrderBook> orderBook;
+    std::shared_ptr<simdjson::dom::parser> parser = std::make_shared<simdjson::dom::parser>();
     bool newCandleAdded = true;
 
   public:
@@ -38,7 +39,11 @@ class Bybit {
 
     void loadCandles();
 
-    void loadPosition();
+    Position getPosition();
+
+    void setPosition(const Position &pos);
+
+    void printPosition() const;
 
     simdjson::simdjson_result<simdjson::ondemand::array> getActiveOrders();
 
@@ -61,6 +66,12 @@ class Bybit {
     void parseWebsocketMessage(const std::string &msg);
 
     std::vector<std::string> getTopics();
+
+    static std::string getExpireTime();
+
+    void parseCandleMessage(const std::string &msg);
+
+    void parseOBMessage(const std::string &msg);
 };
 
 #endif  // BYTRA_BYBIT_H
