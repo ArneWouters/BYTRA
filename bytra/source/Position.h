@@ -15,24 +15,21 @@ class Position {
     long size;
     double entryPrice;
     double liquidationPrice;
-    double unrealisedPnl;
-    double positionMargin;
+    double leverage;
 
   public:
     Position() {
         size = 0;
         entryPrice = 0.0;
         liquidationPrice = 0.0;
-        unrealisedPnl = 0.0;
-        positionMargin = 0.0;
+        leverage = 0.0;
     }
 
-    Position(long &size, double &entryPrice, double &liquidationPrice, double &unrealisedPnl, double &positionMargin) {
+    Position(long &size, double &entryPrice, double &liquidationPrice, double &leverage) {
         this->size = size;
         this->entryPrice = entryPrice;
         this->liquidationPrice = liquidationPrice;
-        this->unrealisedPnl = unrealisedPnl;
-        this->positionMargin = positionMargin;
+        this->leverage = leverage;
     }
 
     [[nodiscard]] bool isShort() const { return size < 0; }
@@ -47,10 +44,20 @@ class Position {
 
     [[nodiscard]] double getLiquidationPrice() const { return liquidationPrice; }
 
-    [[nodiscard]] double getUnrealisedPnl() const { return unrealisedPnl; }
+    [[nodiscard]] double getLeverage() const { return leverage; }
 
-    [[nodiscard]] double getPositionMargin() const { return positionMargin; }
+    [[nodiscard]] double getUnrealisedPnl(const double &lastTradedPrice) const {
+        return size * ((1/entryPrice) - (1/lastTradedPrice));
+    }
 
+    [[nodiscard]] double getUnrealisedPnlPercentage(const double &lastTradedPrice) const {
+        return (getUnrealisedPnl(lastTradedPrice) / getPositionMargin()) * 100;
+    }
+
+    [[nodiscard]] double getPositionMargin() const {
+        // 0.00075 = 0.075% Fee to close
+        return std::abs((size / (entryPrice * leverage)) + ((size / liquidationPrice) * 0.00075));
+    }
 };
 
 #endif  // MEXTRA_POSITION_H

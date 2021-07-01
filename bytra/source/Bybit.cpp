@@ -96,10 +96,9 @@ Position Bybit::getPosition() {
     long size = response["result"]["size"].get_int64();
     if (side == "Sell") size = -size;
     double liqPrice = std::stod((std::string)response["result"]["liq_price"]);
-    double unrealisedPnl = response["result"]["unrealised_pnl"].get_double();
-    double positionMargin = std::stod((std::string)response["result"]["position_margin"]);
+    double leverage = std::stod((std::string)response["result"]["leverage"]);
 
-    return Position(size, entryPrice, liqPrice, unrealisedPnl, positionMargin);
+    return Position(size, entryPrice, liqPrice, leverage);
 }
 
 simdjson::simdjson_result<ondemand::array> Bybit::getActiveOrders() {
@@ -316,6 +315,9 @@ void Bybit::parseWebsocketMessage(const std::string &msg) {
 
         } else if (topic.size() > 14 && topic.substr(0, 14) == "orderBookL2_25") {
             parseOBMessage(msg);
+
+        } else if (topic == "position") {
+            parsePositionMessage(msg);
         }
     } else {
         spdlog::debug("websocket msg: {}", msg);
@@ -416,9 +418,28 @@ void Bybit::parseOBMessage(const std::string &msg) {
     }
 }
 
+void Bybit::parsePositionMessage(const std::string &msg) {
+    dom::element response = parser->parse(msg);
+
+    for (dom::object item : response["data"]) {
+        std::string symbol = (std::string)item["symbol"];
+
+        if (symbol == strategy->getSymbol()) {
+            double entryPrice = std::stod((std::string)item["entry_price"]);
+            std::string side = (std::string)item["side"];
+            long size = item["size"].get_int64();
+            if (side == "Sell") size = -size;
+            double liqPrice = std::stod((std::string)item["liq_price"]);
+            double leverage = std::stod((std::string)item["leverage"]);
+
+            return setPosition(Position(size, entryPrice, liqPrice, leverage));
+        }
+    }
+}
+
 std::vector<std::string> Bybit::getTopics() {
     std::vector<std::string> topics{
-//        "position",
+        "position",
 //        "order",
         "orderBookL2_25." + strategy->getSymbol()
     };
@@ -447,7 +468,7 @@ void Bybit::printPosition() const {
     });
 
     std::printf("\r%li | %.4f | %.4f | %.8f(%.2f%s)", position.getSize(), position.getEntryPrice(),
-                position.getLiquidationPrice(), position.getUnrealisedPnl(),
-                (position.getUnrealisedPnl()/position.getPositionMargin())*100, "%");
+                position.getLiquidationPrice(), position.getUnrealisedPnl(orderBook->getMidPrice()),
+                position.getUnrealisedPnlPercentage(orderBook->getMidPrice()), "%");
     fflush(stdout);
 }

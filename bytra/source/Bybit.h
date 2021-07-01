@@ -72,6 +72,8 @@ class Bybit {
     void parseCandleMessage(const std::string &msg);
 
     void parseOBMessage(const std::string &msg);
+
+    void parsePositionMessage(const std::string &msg);
 };
 
 #endif  // BYTRA_BYBIT_H

@@ -64,6 +64,10 @@ class OrderBook {
         return bidPrice;
     }
 
+    double getMidPrice() {
+        return (askPrice()+bidPrice())/2;
+    }
+
     bool isEmpty() { return askSide.empty() || bidSide.empty(); }
 };
 

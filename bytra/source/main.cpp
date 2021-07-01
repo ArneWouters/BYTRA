@@ -46,6 +46,7 @@ void signal_callback_handler(int signum) {
 }
 
 void run(std::shared_ptr<WebSocket> &ws, std::shared_ptr<Bybit> &bybit) {
+    bybit->setPosition(bybit->getPosition());
     ws->connect(bybit->getTopics());
     long websocketHeartbeatTimer = std::time(nullptr);
     long websocketOrderBookSyncTimer = std::time(nullptr);
@@ -90,7 +91,6 @@ void run(std::shared_ptr<WebSocket> &ws, std::shared_ptr<Bybit> &bybit) {
 
             // Update position
             if (currentTime - positionUpdateTimer > 1) {
-                bybit->setPosition(bybit->getPosition());
                 bybit->printPosition();
                 positionUpdateTimer = currentTime;
             }
