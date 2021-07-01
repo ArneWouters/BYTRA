@@ -19,10 +19,7 @@ Rsi::Rsi() {
     name = "RSI";
     timeframes = {{"1", 1000}};
     symbol = "BTCUSD";
-    qty = 100;
-    orderType = "Limit";
-    slippage = 5.0;
-    stopLossPercentage = 0.03;
+    size = 100;
 }
 
 bool Rsi::checkLongEntry(std::map<TimeFrame, std::vector<std::shared_ptr<Candle>>> &candles) {
@@ -34,9 +31,9 @@ bool Rsi::checkShortEntry(std::map<TimeFrame, std::vector<std::shared_ptr<Candle
 }
 
 bool Rsi::checkExit(std::map<TimeFrame, std::vector<std::shared_ptr<Candle>>> &candles,
-                    std::shared_ptr<Position> position) {
+                    const Position &position) {
     double rsi_value = calculateRSI(candles);
-    return (rsi_value > 50 && position->isLong()) || (rsi_value < 50 && position->isShort());
+    return (rsi_value > 50 && position.isLong()) || (rsi_value < 50 && position.isShort());
 }
 
 double Rsi::calculateRSI(std::map<TimeFrame, std::vector<std::shared_ptr<Candle>>> &candles) {

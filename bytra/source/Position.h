@@ -11,13 +11,14 @@
 #include "Order.h"
 
 class Position {
-  public:
+  private:
     long size;
     double entryPrice;
     double liquidationPrice;
     double unrealisedPnl;
     double positionMargin;
 
+  public:
     Position() {
         size = 0;
         entryPrice = 0.0;
@@ -37,6 +38,18 @@ class Position {
     [[nodiscard]] bool isShort() const { return size < 0; }
 
     [[nodiscard]] bool isLong() const { return size > 0; }
+
+    [[nodiscard]] bool isOpen() const { return size != 0; }
+
+    [[nodiscard]] long getSize() const { return size; }
+
+    [[nodiscard]] double getEntryPrice() const { return entryPrice; }
+
+    [[nodiscard]] double getLiquidationPrice() const { return liquidationPrice; }
+
+    [[nodiscard]] double getUnrealisedPnl() const { return unrealisedPnl; }
+
+    [[nodiscard]] double getPositionMargin() const { return positionMargin; }
 
 };
 

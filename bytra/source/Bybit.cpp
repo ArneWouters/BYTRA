@@ -172,10 +172,6 @@ void Bybit::placeMarketOrder(const Order &ord) {
         spdlog::error("Bybit::placeMarketOrder - bad response - " + (std::string)response["ret_msg"]);
         throw std::runtime_error("Bad API response.");
     }
-
-//    if (ord.reduce) {
-//        position->activeOrder = nullptr;
-//    }
 }
 
 void Bybit::placeLimitOrder(const Order &ord) {
@@ -204,12 +200,6 @@ void Bybit::placeLimitOrder(const Order &ord) {
         spdlog::error("Bybit::placeLimitOrder - bad response - " + (std::string)response["ret_msg"]);
         throw std::runtime_error("Bad API response.");
     }
-
-//    position->activeOrder = std::make_shared<Order>(ord);
-//    position->activeOrder->id = (std::string)response["result"]["order_id"];
-//    spdlog::debug("Set activeOrder with price={}, interval=({}, {}), reduce={}", position->activeOrder->price,
-//                  position->activeOrder->priceInterval.first, position->activeOrder->priceInterval.second,
-//                  position->activeOrder->reduce);
 }
 
 void Bybit::amendLimitOrder(const Order &ord) {
@@ -230,139 +220,51 @@ void Bybit::amendLimitOrder(const Order &ord) {
         spdlog::error("Bybit::amendLimitOrder - bad response - " + (std::string)response["ret_msg"]);
         throw std::runtime_error("Bad API response.");
     }
-
-//    if (retCode == 30032 || retCode == 30037 || retCode == 20001) {
-//        position->activeOrder = nullptr;
-//    }
 }
 
-void Bybit::cancelActiveLimitOrder() {
-//    std::string expires
-//        = std::to_string(duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count() + 1000);
-//
-//    std::string endpoint = "/v2/private/order/cancel";
-//    // pairs have to be in alphabetic order
-//    auto payload = RESTClient::Payload{{"api_key", apiKey},
-//                                       {"order_id", position->activeOrder->id},
-//                                       {"symbol", strategy->getSymbol()},
-//                                       {"timestamp", expires}};
-//    payload.addPair({"sign", HmacEncode(payload.content, apiSecret)});
-//    auto response_json = RESTClient::Post(baseUrl, endpoint, payload);
-//    dom::parser parser;
-//    dom::element response = parser.parse(response_json);
-//
-//    int retCode = response["ret_code"].get_int64();
-//
-//    if (retCode != 0 && retCode != 30032) {
-//        spdlog::error("Bybit::cancelLimitOrder - bad response - " + (std::string)response["ret_msg"]);
-//        throw std::runtime_error("Bad API response.");
-//    }
+void Bybit::cancelActiveLimitOrder(const std::string &id) {
+    std::string expires
+        = std::to_string(duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count() + 1000);
 
-//    position->activeOrder = nullptr;
+    std::string endpoint = "/v2/private/order/cancel";
+    // pairs have to be in alphabetic order
+    auto payload = RESTClient::Payload{{"api_key", apiKey},
+                                       {"order_id", id},
+                                       {"symbol", strategy->getSymbol()},
+                                       {"timestamp", expires}};
+    payload.addPair({"sign", HmacEncode(payload.content, apiSecret)});
+    auto response_json = RESTClient::Post(baseUrl, endpoint, payload);
+    dom::element response = parser->parse(response_json);
+
+    long retCode = response["ret_code"].get_int64();
+
+    if (retCode != 0 && retCode != 30032) {
+        spdlog::error("Bybit::cancelLimitOrder - bad response - " + (std::string)response["ret_msg"]);
+        throw std::runtime_error("Bad API response.");
+    }
 }
 
 void Bybit::doAutomatedTrading() {
-//    if (newCandleAdded) {
-//        newCandleAdded = false;
-//
-//        if (position->qty != 0) {
-//            auto exit = strategy->checkExit(candles, position);
-//
-//            if (exit) {
-//                spdlog::debug("Exit signal");
-//
-//                if (position->activeOrder && !position->activeOrder->reduce) {
-//                    cancelActiveLimitOrder();
-//                }
-//
-//                if (strategy->getOrderType() == "Market") {
-//                    placeMarketOrder(Order(-position->qty, true));
-//
-//                } else if (strategy->getOrderType() == "Limit" && !orderBook->isEmpty() && !position->activeOrder) {
-//                    double price = position->qty > 0 ? orderBook->askPrice() : orderBook->bidPrice();
-//                    Order ord(price, -position->qty, strategy->getSlippage(), true);
-//                    placeLimitOrder(ord);
-//                    return;
-//                }
-//            }
-//        }
-//
-//        if (position->qty == 0 && !position->activeOrder && strategy->checkLongEntry(candles)) {
-//            spdlog::debug("Entry signal: Long");
-//
-//            if (strategy->getOrderType() == "Market") {
-//                placeMarketOrder(Order(strategy->getQty()));
-//
-//            } else if (strategy->getOrderType() == "Limit" && !orderBook->isEmpty()) {
-//                Order ord(orderBook->bidPrice(), strategy->getQty(), strategy->getSlippage());
-//                placeLimitOrder(ord);
-//            }
-//
-//            return;
-//        } else if (position->qty == 0 && !position->activeOrder && strategy->checkShortEntry(candles)) {
-//            spdlog::debug("Entry signal: Short");
-//
-//            if (strategy->getOrderType() == "Market") {
-//                placeMarketOrder(Order(-strategy->getQty()));
-//
-//            } else if (strategy->getOrderType() == "Limit" && !orderBook->isEmpty()) {
-//                Order ord(orderBook->askPrice(), -strategy->getQty(), strategy->getSlippage());
-//                placeLimitOrder(ord);
-//            }
-//            return;
-//        }
-//    }
-//
-//    if (position->activeOrder) {
-//        if (position->activeOrder->isBuy()) {
-//            double bidPrice = orderBook->bidPrice();
-//
-//            if (bidPrice != position->activeOrder->price) {
-//                if (bidPrice >= position->activeOrder->priceInterval.first
-//                    && bidPrice <= position->activeOrder->priceInterval.second) {
-//                    position->activeOrder->price = bidPrice;
-//                    amendLimitOrder(*position->activeOrder);
-//
-//                } else if (position->activeOrder->reduce) {
-//                    cancelActiveLimitOrder();
-//                    placeMarketOrder(Order(-position->qty, true));
-//
-//                } else {
-//                    cancelActiveLimitOrder();
-//                }
-//            }
-//        } else {
-//            double askPrice = orderBook->askPrice();
-//
-//            if (askPrice != position->activeOrder->price) {
-//                if (askPrice >= position->activeOrder->priceInterval.first
-//                    && askPrice <= position->activeOrder->priceInterval.second) {
-//                    position->activeOrder->price = askPrice;
-//                    amendLimitOrder(*position->activeOrder);
-//
-//                } else if (position->activeOrder->reduce) {
-//                    cancelActiveLimitOrder();
-//                    placeMarketOrder(Order(-position->qty, true));
-//
-//                } else {
-//                    cancelActiveLimitOrder();
-//                }
-//            }
-//        }
-//    }
-//
-//    // Stop Loss
-//    if (position->qty != 0) {
-//        double midPrice = (orderBook->askPrice() + orderBook->bidPrice()) / 2;
-//        if ((position->isLong() && midPrice < position->stopLossPrice)
-//            || (position->isShort() && midPrice > position->stopLossPrice)) {
-//            if (position->activeOrder) {
-//                cancelActiveLimitOrder();
-//            }
-//            placeMarketOrder(Order(-position->qty, true));
-//            spdlog::info("Stop Loss triggered at {}", position->stopLossPrice);
-//        }
-//    }
+    if (newCandleAdded) {
+        newCandleAdded = false;
+
+        if (position.isOpen()) {
+            auto exit = strategy->checkExit(candles, position);
+
+            if (exit) {
+                placeMarketOrder(Order(-position.getSize(), true));
+            }
+        }
+
+        if (!position.isOpen() && strategy->checkLongEntry(candles)) {
+            spdlog::debug("Entry signal: Long");
+            placeMarketOrder(Order(strategy->getQty()));
+
+        } else if (!position.isOpen() && strategy->checkShortEntry(candles)) {
+            spdlog::debug("Entry signal: Short");
+            placeMarketOrder(Order(-strategy->getQty()));
+        }
+    }
 }
 
 void Bybit::removeUnusedCandles() {
@@ -544,8 +446,8 @@ void Bybit::printPosition() const {
       std::cout << std::endl << "Qty | Entry Price | Liq. Price | Unrealized P&L" << std::endl;
     });
 
-    std::printf("\r%li | %.4f | %.4f | %.8f(%.2f%s)", position.size, position.entryPrice,
-                position.liquidationPrice, position.unrealisedPnl,
-                (position.unrealisedPnl/position.positionMargin)*100, "%");
+    std::printf("\r%li | %.4f | %.4f | %.8f(%.2f%s)", position.getSize(), position.getEntryPrice(),
+                position.getLiquidationPrice(), position.getUnrealisedPnl(),
+                (position.getUnrealisedPnl()/position.getPositionMargin())*100, "%");
     fflush(stdout);
 }

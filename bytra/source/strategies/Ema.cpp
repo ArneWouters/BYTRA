@@ -17,10 +17,7 @@ Ema::Ema() {
     name = "EMA";
     timeframes = {{"1", 1000}};
     symbol = "BTCUSD";
-    qty = 100;
-    orderType = "Market";
-    slippage = 10.0;
-    stopLossPercentage = 0.03;
+    size = 100;
 }
 
 bool Ema::checkLongEntry(std::map<TimeFrame, std::vector<std::shared_ptr<Candle>>> &candles) {
@@ -46,8 +43,8 @@ bool Ema::checkShortEntry(std::map<TimeFrame, std::vector<std::shared_ptr<Candle
 }
 
 bool Ema::checkExit(std::map<TimeFrame, std::vector<std::shared_ptr<Candle>>> &candles,
-                    std::shared_ptr<Position> position) {
-    return ((position->isLong() && checkShortEntry(candles)) || (position->isShort() && checkLongEntry(candles)));
+                    const Position &position) {
+    return ((position.isLong() && checkShortEntry(candles)) || (position.isShort() && checkLongEntry(candles)));
 }
 
 std::pair<double, double> Ema::calculateEMA(std::map<TimeFrame, std::vector<std::shared_ptr<Candle>>> &candles,

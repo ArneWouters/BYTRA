@@ -18,11 +18,8 @@ class Strategy {
   protected:
     std::string name;
     std::vector<std::pair<std::string, int>> timeframes;  // keep amounts below 10k
-    long qty;
+    long size;
     std::string symbol;
-    std::string orderType;
-    double slippage;
-    double stopLossPercentage = 0.03;
 
   public:
     virtual bool checkLongEntry(std::map<TimeFrame, std::vector<std::shared_ptr<Candle>>> &candles) = 0;
@@ -30,7 +27,7 @@ class Strategy {
     virtual bool checkShortEntry(std::map<TimeFrame, std::vector<std::shared_ptr<Candle>>> &candles) = 0;
 
     virtual bool checkExit(std::map<TimeFrame, std::vector<std::shared_ptr<Candle>>> &candles,
-                           std::shared_ptr<Position> position)
+                          const Position &position)
         = 0;
 
     std::string getName() { return name; }
@@ -39,13 +36,7 @@ class Strategy {
 
     std::string getSymbol() { return symbol; }
 
-    std::string getOrderType() { return orderType; }
-
-    [[nodiscard]] long getQty() const { return qty; }
-
-    [[nodiscard]] double getSlippage() const { return slippage; }
-
-    [[nodiscard]] double getStopLossPercentage() const { return stopLossPercentage; }
+    [[nodiscard]] long getQty() const { return size; }
 };
 
 #endif  // BYTRA_STRATEGY_H

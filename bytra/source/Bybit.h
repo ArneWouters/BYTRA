@@ -57,7 +57,7 @@ class Bybit {
 
     void amendLimitOrder(const Order &ord);
 
-    void cancelActiveLimitOrder();
+    void cancelActiveLimitOrder(const std::string &id);
 
     void doAutomatedTrading();
 
